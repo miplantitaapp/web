@@ -217,26 +217,30 @@
         .star-group.g2 { animation: twinkle-group-2 4s infinite alternate; }
         .star-group.g3 { animation: twinkle-group-3 6s infinite alternate; }
         
-        /* --- Toast/Banner de Clima --- */
-        #weather-toast {
+        /* --- Toast/Banner de Clima (toast-glass modifier) --- */
+        .toast-glass {
             position: fixed;
             top: 0;
             left: 50%;
-            transform: translate(-50%, -100%); /* Oculto arriba */
-            background-color: var(--accent-soft);
+            transform: translate(-50%, -120%); /* hidden above */
             color: var(--text-color);
-            font-weight: 600;
-            border-radius: 0 0 1rem 1rem;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-weight: 700;
+            border-radius: 0 0 1rem 1rem; /* flat top, rounded bottom */
+            box-shadow: 0 8px 18px rgba(16,24,40,0.08);
             opacity: 0;
-            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease-out;
-            z-index: 50;
+            transition: transform 320ms cubic-bezier(0.22, 0.9, 0.31, 1), opacity 260ms ease-out;
+            z-index: 60;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            padding: 0.75rem 1.5rem;
+            padding: 0.5rem 0.9rem;
             text-align: center;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
-        #weather-toast.show {
+        .toast-glass.show {
             transform: translate(-50%, 0); /* Visible */
             opacity: 1;
         }
@@ -284,7 +288,9 @@
         }
         
         .hydration-bar-fill {
-            transition: width 1s linear; 
+            transition: width 1s linear;
+            /* Single semi-transparent fill to match glass aesthetic */
+            background: rgba(181,244,247,0.35);
         }
         
         /* Fondo fijo para el footer */
@@ -303,6 +309,78 @@
             transform: scale(1);
             opacity: 1;
         }
+        /* --- Responsive modals for mobile/tablet --- */
+        .glass-panel.modal-responsive {
+            max-width: 92vw;
+            width: auto !important;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* Specific modal tweaks */
+        #ai-modal .glass-panel,
+        #seed-modal .glass-panel,
+        #prune-panel .glass-panel,
+        #photo-panel .glass-panel,
+        #expanded-photo-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        /* Ensure modal footers/buttons stack nicely on small screens */
+        @media (max-width: 640px) {
+            #seed-modal .glass-panel .flex.justify-between { flex-direction: column; gap: 0.75rem; align-items: center; }
+            #seed-modal #seed-prev-btn, #seed-modal #seed-next-btn { width: 100%; }
+            #prune-panel .glass-panel, #ai-modal .glass-panel { padding: 0.75rem; }
+            #ai-modal .glass-panel button,
+            #photo-panel .glass-panel button { width: 100%; align-self: center; }
+        }
+
+        /* Make sure scanner bars and tip text don't force fixed heights */
+        #ai-modal #scanner-animation { height: auto; min-height: 40px; }
+        #ai-modal #ai-tip-text { white-space: normal; line-height: 1.1; }
+
+        /* Modal footer (sticky on small screens) */
+        .modal-footer {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
+            padding-top: 0.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .modal-footer {
+                position: sticky;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(180deg, rgba(255,255,255,0.0), rgba(255,255,255,0.6));
+                padding: 0.75rem 1rem;
+                gap: 0.5rem;
+                z-index: 80;
+            }
+            .modal-footer button { width: 100%; }
+        }
+
+        /* Responsive font sizes for modal content */
+        @media (max-width: 640px) {
+            .glass-panel { font-size: 0.95rem; }
+            .glass-panel h2 { font-size: 1.25rem; }
+        }
+
+        /* Smooth entry animations for modals */
+        .glass-panel.modal-responsive { transform-origin: center bottom; }
+        .glass-panel.modal-responsive { transition: transform 280ms cubic-bezier(.22,.9,.31,1), opacity 280ms ease; transform: translateY(8px); opacity: 0; }
+        /* When the modal container is shown (it receives the 'flex' class), reveal the inner panel */
+        .fixed.flex .glass-panel.modal-responsive { transform: translateY(0); opacity: 1; }
         
     </style>
 </head>
@@ -314,9 +392,9 @@
     </div>
 
     <!-- Toast de Clima (Notificación) -->
-    <div id="weather-toast" class="glass-panel text-lg font-bold"></div>
+    <div id="weather-toast" class="glass-panel toast-glass text-lg font-bold"></div>
     <!-- Toast reutilizable para mensajes (clima, agua, etc.) -->
-    <div id="app-toast" class="glass-panel text-lg font-bold" style="display:none; position:fixed; top:0; left:50%; transform:translate(-50%,-100%); z-index:60;"></div>
+    <div id="app-toast" class="glass-panel toast-glass text-lg font-bold" style="display:none;"></div>
 
     <!-- Contenido Principal -->
 <main class="flex-grow container mx-auto p-4 md:p-8 lg:p-12 z-20 relative">
@@ -337,7 +415,7 @@
             <h2 class="text-xl md:text-2xl font-bold mb-4">¿Cómo está el clima?</h2>
             <div class="flex flex-wrap justify-center gap-4">
                 
-                <button onclick="App.setWeather('day')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-yellow-400" title="Día">
+                <button onclick="App.setWeather('day')" class="glass-card btn-circle--large btn-circle shadow-lg focus:ring-4 focus:ring-yellow-400" title="Día">
                 <!-- Boton  Sol ☀️-->
                 <img 
                     src="img/sunnysun.png" 
@@ -345,14 +423,14 @@
                     class="h-20 w-20 object-contain mx-auto">
                 </button>
                 
-                <button onclick="App.setWeather('night')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-indigo-400" title="Noche">
+                <button onclick="App.setWeather('night')" class="glass-card btn-circle--large btn-circle shadow-lg focus:ring-4 focus:ring-indigo-400" title="Noche">
                     <!-- Boton luna 🌙-->
                     <img 
                     src="img/moonymoon.png" 
                     alt="Noche" 
                     class="h-32 w-32 object-contain mx-auto">
                 </button>
-                <button onclick="App.setWeather('rainy')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-blue-400" title="Lluvioso">
+                <button onclick="App.setWeather('rainy')" class="glass-card btn-circle--large btn-circle shadow-lg focus:ring-4 focus:ring-blue-400" title="Lluvioso">
                     <!-- Boton nube ☁️-->
                     <img 
                     src="img/cloudycloud.png" 
@@ -370,7 +448,7 @@
     </main>
     
     <!-- MODAL: Bienvenida -->
-    <div id="welcome-modal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-[99]">
+    <div id="welcome-modal" data-modal="true" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-[99]">
         <div class="glass-panel p-8 w-full max-w-lg text-center flex flex-col items-center">
             <div class="flex items-center space-x-4">
                 
@@ -404,7 +482,7 @@
             </div>
 
             
-            <div class="bg-red-100 p-3 rounded-xl border border-red-300 mb-3 text-sm text-red-800">
+            <div class="glass-card p-3 rounded-xl mb-3 text-sm text-red-800" style="border:1px solid rgba(239,68,68,0.12); background: rgba(255, 240, 240, 0.55);">
                 <p class="font-bold">⚠️ IMPORTANTE:</p>
                 <ul class="list-disc list-inside text-left">
                     <li>Toda la información que compartes con esta app se almacena <span class="font-extrabold">SOLO en tu dispositivo</span>, no compartimos información con terceros.</li>
@@ -413,28 +491,25 @@
                 </ul>
             </div>
 
-            <button onclick="App.closeWelcomeModal()" 
-                    class="glass-card px-8 py-4 text-sm font-bold bg-highlight hover:bg-B5F4F7 transition-colors focus:ring-4 focus:ring-highlight/50">
-                ¡Entendido 👍🏻!
-            </button>
+            <div class="modal-footer">
+                <button onclick="App.closeWelcomeModal()" data-close="true" aria-label="Entendido" class="btn-circle">✅</button>
+            </div>
         </div>
     </div>
 
     <!-- MODAL: Sembrar -->
-    <div id="seed-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50">
-        <div id="seed-modal-content" class="glass-panel p-6 w-full max-w-md">
+    <div id="seed-modal" data-modal="true" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50">
+        <div id="seed-modal-content" class="glass-panel modal-responsive p-6 w-full max-w-md">
             <h2 class="text-3xl font-bold text-center mb-6">🌱 ¡A Sembrar!</h2>
             <div id="seed-step-display" class="text-center">
                 
             </div>
-            <div class="flex justify-between items-center mt-8">
-                <button id="seed-prev-btn" onclick="App.prevSeedStep()" class="glass-card p-3 rounded-full text-2xl" disabled>
-                    <span class="icon-svg" aria-label="Anterior">←</span>
-                </button>
+            <div class="mt-4 text-center" id="seed-progress-container">
                 <p id="seed-progress" class="text-lg font-semibold">Paso 1 de 5</p>
-                <button id="seed-next-btn" onclick="App.nextSeedStep()" class="glass-card p-3 rounded-full text-2xl bg-green-200">
-                    <span class="icon-svg" aria-label="Siguiente">→</span>
-                </button>
+            </div>
+            <div class="modal-footer">
+                <button id="seed-prev-btn" onclick="App.prevSeedStep()" class="btn-circle" disabled aria-label="Anterior">←</button>
+                <button id="seed-next-btn" onclick="App.nextSeedStep()" class="btn-circle" aria-label="Siguiente">→</button>
             </div>
             <p class="text-center mt-4 text-sm text-gray-600">
                 <span class="font-bold">Nota:</span> ¡Activa el sonido para escuchar los tips!
@@ -443,13 +518,11 @@
     </div>
     
     <!-- MODAL: Podar -->
-    <div id="prune-panel" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50">
-        <div class="glass-panel p-6 w-full max-w-md">
-            <div class="flex justify-between items-start">
+    <div id="prune-panel" data-modal="true" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50">
+        <div class="glass-panel modal-responsive p-6 w-full max-w-md">
+                <div class="flex justify-between items-start">
                 <h2 class="text-3xl font-bold mb-4">✂️ ¡Aprendiendo a Podar!</h2>
-                <button onclick="App.closePrunePanel()" class="text-2xl p-2 rounded-full glass-card hover:bg-red-300 transition-colors">
-                    ❌
-                </button>
+                <button onclick="App.closePrunePanel()" data-close="true" class="text-2xl btn-circle" aria-label="Cerrar">❌</button>
             </div>
             <div id="prune-step-container" class="space-y-4 text-center">
                 
@@ -457,27 +530,28 @@
             <p class="text-center mt-4 text-lg font-medium text-gray-700">
                 <span class="font-bold">Tip:</span> Recuerda siempre pedir ayuda a un adulto.
             </p>
-            
+            <div class="modal-footer">
+                <button onclick="App.closePrunePanel()" data-close="true" aria-label="Hecho" class="btn-circle">✅</button>
+            </div>
         </div>
     </div>
     
     <!-- MODAL: Álbum de Fotos (Contenedor de miniaturas) -->
-    <div id="photo-panel" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50 overflow-y-auto">
-        <div class="glass-panel p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-start mb-6">
-                <h2 id="photo-panel-title" class="text-3xl font-bold">📸 Álbum de Plantita</h2>
-                <button onclick="App.closePhotoPanel()" class="text-2xl p-2 rounded-full glass-card hover:bg-red-300 transition-colors">
-                    ❌
-                </button>
-            </div>
+    <div id="photo-panel" data-modal="true" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50 overflow-y-auto">
+        <div class="glass-panel modal-responsive p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-start mb-6">
+                    <h2 id="photo-panel-title" class="text-3xl font-bold">📸 Álbum de Plantita</h2>
+                    <!-- Header close removed: footer 'Cerrar' button is primary close control -->
+                </div>
             
             <!-- Controles de Subida -->
             <div class="flex flex-col md:flex-row items-center justify-between glass-card p-4 mb-6">
                 <p id="photo-limit-text" class="text-xl font-semibold mb-4 md:mb-0">¡Captura el crecimiento de tu planta! (0/9)</p>
                 <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="App.handlePhotoUpload(event)">
-                <button onclick="document.getElementById('photo-input').click()" class="btn-icon btn-small text-4xl bg-yellow-400 hover:bg-yellow-500 transition-colors">
-                    📸
-                </button>
+                <button onclick="document.getElementById('photo-input').click()" class="btn-circle" title="Subir foto" aria-label="Subir foto">📸</button>
+            </div>
+                <div class="modal-footer">
+                <button onclick="App.closePhotoPanel()" data-close="true" aria-label="Cerrar" class="btn-circle">❌</button>
             </div>
 
             <!-- Grid de Fotos -->
@@ -486,21 +560,21 @@
             </div>
             
             <!-- MODAL: Análisis AI (Simulado) -->
-            <div id="ai-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center p-4 z-50">
-                <div class="glass-panel p-8 w-full max-w-md text-center">
+            <div id="ai-modal" data-modal="true" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center p-4 z-50">
+                <div class="glass-panel modal-responsive p-8 w-full max-w-md text-center">
                     <h3 class="text-2xl font-bold mb-4">Analizando... 🧐</h3>
                     <div id="scanner-animation" class="h-10 relative mb-6">
                         <div class="absolute inset-0 flex space-x-1 justify-center items-center">
-                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0s;"></div>
-                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0.2s;"></div>
-                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0.4s;"></div>
-                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0.6s;"></div>
+                            <div class="scanner-bar w-1 h-full" style="animation-delay: 0s; background: rgba(181,244,247,0.6);"></div>
+                            <div class="scanner-bar w-1 h-full" style="animation-delay: 0.2s; background: rgba(181,244,247,0.6);"></div>
+                            <div class="scanner-bar w-1 h-full" style="animation-delay: 0.4s; background: rgba(181,244,247,0.6);"></div>
+                            <div class="scanner-bar w-1 h-full" style="animation-delay: 0.6s; background: rgba(181,244,247,0.6);"></div>
                         </div>
                     </div>
                     <p id="ai-tip-text" class="text-2xl font-extrabold text-green-700 h-10"></p>
-                    <button onclick="App.closeAiModal()" class="glass-card px-6 py-2 mt-6 text-xl bg-red-400 hover:bg-red-500 transition-colors">
-                        ¡Entendido!
-                    </button>
+                    <div class="modal-footer">
+                                <button onclick="App.closeAiModal()" data-close="true" aria-label="Entendido" class="btn-circle" style="font-size:1.25rem;">✅</button>
+                    </div>
                     
                 </div>
             </div>
@@ -509,12 +583,10 @@
     </div>
     
     <!-- MODAL: Foto Expandida con detalles (NUEVO) -->
-    <div id="expanded-photo-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden justify-center items-center p-4 z-[90]">
-        <div id="expanded-photo-content" class="expanded-modal-content glass-panel p-6 w-full max-w-4xl max-h-[95vh] flex flex-col items-center">
+    <div id="expanded-photo-modal" data-modal="true" class="fixed inset-0 bg-black bg-opacity-70 hidden justify-center items-center p-4 z-[90]">
+        <div id="expanded-photo-content" class="expanded-modal-content glass-panel modal-responsive p-6 w-full max-w-4xl max-h-[95vh] flex flex-col items-center">
             
-            <button onclick="App.closeExpandedPhotoModal()" class="absolute top-4 right-4 text-3xl p-2 rounded-full glass-card hover:bg-red-300 transition-colors z-10" aria-label="Cerrar">
-                ❌
-            </button>
+            <button onclick="App.closeExpandedPhotoModal()" data-close="true" class="absolute top-4 right-4 text-3xl btn-circle z-10" aria-label="Cerrar">❌</button>
             
             <img id="expanded-photo-img" src="" alt="Foto expandida" class="w-full max-h-[75vh] object-contain rounded-lg shadow-xl mb-4" />
             
@@ -522,25 +594,140 @@
                 <p class="text-lg font-semibold text-gray-800">Fecha de Subida:</p>
                 <p id="expanded-photo-date" class="text-2xl font-extrabold text-[#D4A373] mt-1"></p>
             </div>
+            <div class="modal-footer">
+                <button onclick="App.closeExpandedPhotoModal()" data-close="true" aria-label="Cerrar" class="btn-circle">❌</button>
+            </div>
         </div>
     </div>
 
 
     <!-- Footer Fijo -->
-    <footer class="fixed bottom-0 left-0 w-full bg-faedcd text-text-color p-4 text-center border-t-4 border-accent-soft z-40">
-        <p class="text-sm md:text-base font-semibold">Desarrollado por Mateo Corrales y Piero Solano</p>
-        <p class="text-sm md:text-base">Cedes don Bosco, Pasitos Pequeños, Prepa-B 2025.</p>
-        <div class="mt-1 flex justify-center items-center">
-            
+    <footer id="site-footer" class="fixed bottom-0 left-0 w-full bg-faedcd text-text-color p-4 text-center border-t-4 border-accent-soft z-40 footer-full">
+        <div id="footer-line-1" class="footer-line">
+            <p id="footer-authors" class="text-sm md:text-base font-semibold">Desarrollado por Mateo Corrales y Piero Solano</p>
+        </div>
+
+        <div id="footer-line-2" class="footer-line footer-line-2">
+            <p id="footer-location" class="text-sm md:text-base">Cedes don Bosco, Pasitos Pequeños, Prepa-B 2025.</p>
+        </div>
+
+        <div id="footer-logo-wrap" class="mt-1 flex justify-center items-center footer-logo-wrap">
             <img 
+                    id="footer-expotec-logo"
                     src="img/logoEXPOTEC.png" 
-                    alt="Logo de Mi Plantita AI" 
+                    alt="Logo de Expotec" 
                     class="w-20 object-contain mx-auto mb-1">
         </div>
     </footer>
 
+    <style>
+        /* Footer responsive visibility states */
+        #site-footer { transition: all 240ms ease; }
+
+        /* Full state: show all lines and logo */
+        #site-footer.footer-full #footer-line-1,
+        #site-footer.footer-full #footer-line-2,
+        #site-footer.footer-full #footer-logo-wrap { opacity: 1; transform: translateY(0); }
+
+        /* Condensed state: hide second line and logo, keep authors text visible */
+        #site-footer.footer-condensed #footer-line-1 { opacity: 1; transform: translateY(0); }
+        #site-footer.footer-condensed #footer-line-2,
+        #site-footer.footer-condensed #footer-logo-wrap { opacity: 0; transform: translateY(6px); pointer-events: none; height:0; overflow:hidden; }
+
+        /* Hidden / transitions baseline */
+        #site-footer .footer-line, #site-footer .footer-logo-wrap { transition: opacity 200ms ease, transform 200ms ease; }
+
+        /* Ensure layout doesn't jump when condensing: min-height for footer */
+        #site-footer { min-height: 56px; }
+
+        /* Responsive text & logo scaling */
+        @media (max-width: 640px) {
+            #footer-authors { font-size: 0.9rem; }
+            #footer-location { font-size: 0.8rem; }
+            #footer-expotec-logo { width: 44px; }
+            #site-footer { padding: 8px; }
+        }
+
+        @media (min-width: 641px) and (max-width: 1024px) {
+            #footer-authors { font-size: 1rem; }
+            #footer-location { font-size: 0.95rem; }
+            #footer-expotec-logo { width: 56px; }
+        }
+
+        @media (min-width: 1025px) {
+            #footer-authors { font-size: 1.05rem; }
+            #footer-location { font-size: 1rem; }
+            #footer-expotec-logo { width: 80px; }
+        }
+
+        /* Small visual polish */
+        #site-footer.footer-condensed { box-shadow: 0 -4px 8px rgba(0,0,0,0.04); }
+    </style>
+
 
     <script>
+        /* Global button style: subtle glassmorphism for modal/action buttons
+           New unified class: .btn-circle. Use this class on every <button>.
+           .btn-circle--large keeps climate buttons larger and slightly rounded.
+           Variants: --accent, --danger for semantic coloring. */
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+            /* New unified circular button */
+            .btn-circle {
+                background: rgba(255,255,255,0.06);
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
+                border: 0;
+                box-shadow: 0 6px 12px rgba(16,24,40,0.04);
+                color: var(--text-color, #1f2937);
+                transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+                padding: 0.45rem;
+                border-radius: 9999px; /* circular */
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 3.2rem;
+                min-height: 3.2rem;
+                font-size: 1.05rem;
+                line-height: 1;
+                cursor: pointer;
+            }
+            .btn-circle:active { transform: translateY(1px) scale(0.995); }
+            .btn-circle:hover { background: rgba(255,255,255,0.09); box-shadow: 0 10px 18px rgba(16,24,40,0.05); }
+
+            /* Variants */
+            .btn-circle--accent { background: rgba(212,163,115,0.08); color: #3b2f20; }
+            .btn-circle--danger { background: rgba(239,68,68,0.06); color: #502323; }
+            .btn-circle--accent:hover { background: rgba(212,163,115,0.12); }
+            .btn-circle--danger:hover { background: rgba(239,68,68,0.09); }
+
+            /* Large variant for climate image buttons */
+            /* Large climate buttons: force circular shape and clip inner images */
+            .btn-circle--large {
+                width: 5.6rem;
+                height: 5.6rem;
+                min-width: 5.6rem;
+                min-height: 5.6rem;
+                border-radius: 9999px !important;
+                padding: 0.45rem;
+                overflow: hidden;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            /* Make sure images inside climate buttons scale to fit and don't force rectangular shape */
+            .btn-circle--large > img, .btn-circle--large img {
+                max-width: 72%;
+                max-height: 72%;
+                width: auto;
+                height: auto;
+                display: block;
+            }
+
+            /* Inline textual buttons (rare) */
+            .btn-circle.inline { border-radius: 0.6rem; padding: 0.45rem 0.85rem; min-width: auto; }
+        `;
+        document.head.appendChild(styleEl);
         // Definición de variables globales para el estado y configuración
         const DB_NAME = 'miPlantitaAI_state'; 
         const APP_ID = 'mi-plantita-ai-v1'; 
@@ -577,6 +764,8 @@
                 activePotId: null, 
                 hydrationIntervals: {}
             },
+            // z-index tracker for stacked modals
+            modalZ: 0,
 
             // --- Persistencia (localStorage) ---
             saveState() {
@@ -607,12 +796,16 @@
             
             // --- Lógica del Pop-up de Bienvenida ---
             showWelcomeModal() {
-                document.getElementById('welcome-modal').classList.remove('hidden');
+                const modal = document.getElementById('welcome-modal');
+                if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
+                this.updateModalCloseVisibility();
             },
 
             closeWelcomeModal() {
-                document.getElementById('welcome-modal').classList.add('hidden');
+                const modal = document.getElementById('welcome-modal');
+                if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
                 if (navigator.vibrate) navigator.vibrate(50);
+                this.updateModalCloseVisibility();
             },
 
             // --- Inicialización ---
@@ -652,9 +845,9 @@
                             
                             <span class="text-6xl mb-4">🕳️</span>
                             <p class="text-xl font-semibold mb-6">Maceta vacía, ¿Quieres sembrar?</p>
-                            <button onclick="App.openSeedModal('${plant.id}')" class="${buttonBaseClass} text-2xl bg-d4a373 text-white">
-                                🪏
-                            </button>
+                            <button onclick="App.openSeedModal('${plant.id}')" class="btn-circle inline" aria-label="Sembrar">
+                                        🪏
+                                    </button>
                         </div>
                     `;
                 } else {
@@ -665,21 +858,16 @@
                     const percent = Math.min(100, (secondsRemaining / (HYDRATION_DURATION_MS / 1000)) * 100);
                     
                     const hydrateBtnClasses = [
-                        `${buttonBaseClass} bg-blue-400 text-white`,
-                        isDry ? 'pulse' : 'opacity-50' 
-                    ].join(' ');
+                            `${buttonBaseClass} btn-circle`,
+                            isDry ? 'pulse' : 'opacity-50' 
+                        ].join(' ');
                     const hydrateTooltip = isDry ? '¡Necesita agua!' : `Aún le quedan ${secondsRemaining}s`;
 
                     content = `
                         <div class="flex-grow flex flex-col justify-between items-center w-full relative">
                             
                             <!-- Botón de Eliminar Planta -->
-                            <button onclick="App.deletePlant('${plant.id}')" 
-                                    class="absolute top-0 right-0 w-8 h-8 flex items-center justify-center bg-red-400 text-white rounded-full shadow-md hover:bg-red-600 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 z-10" 
-                                    title="Eliminar Planta"
-                                    aria-label="Eliminar planta">
-                                &times;
-                            </button>
+                            <button onclick="App.deletePlant('${plant.id}')" class="btn-circle btn-circle--danger absolute top-2 right-2 z-10" title="Eliminar Planta" aria-label="Eliminar planta">×</button>
 
                             <div id="plant-visual-${plant.id}" class="text-[6rem] transition-transform duration-500 hover:scale-105">
                                 
@@ -690,28 +878,23 @@
                             <div class="flex space-x-2 mt-4">
                                 
                                 <button id="btn-hydrate-${plant.id}" onclick="App.hydratePlant('${plant.id}')" 
-                                        class="${hydrateBtnClasses}" 
+                                        class="btn-circle ${isDry ? 'pulse' : 'opacity-50'}" 
                                         title="${hydrateTooltip}" 
                                         aria-label="Hidratar">
                                     💧
                                 </button>
                                 
-                                <button onclick="App.openPrunePanel('${plant.id}')" class="${buttonBaseClass} bg-green-400 text-white" aria-label="Podar">
-                                    ✂️
-                                </button>
-                                
-                                <button onclick="App.openPhotoPanel('${plant.id}')" class="${buttonBaseClass} bg-yellow-400 text-white" aria-label="Fotografiar">
-                                    📸
-                                </button>
+                                <button onclick="App.openPrunePanel('${plant.id}')" class="btn-circle" aria-label="Podar">✂️</button>
+                                <button onclick="App.openPhotoPanel('${plant.id}')" class="btn-circle" aria-label="Fotografiar">📸</button>
                             </div>
 
                             <!-- Barra de Hidratación -->
-                            <div class="w-full mt-4 bg-gray-300 rounded-full h-3">
-                                <div id="bar-hydrate-${plant.id}" 
-                                     class="hydration-bar-fill h-3 rounded-full bg-blue-500" 
-                                     style="width: ${percent}%;">
-                                </div>
-                            </div>
+                              <div class="w-full mt-4 bg-gray-300 rounded-full h-3">
+                              <div id="bar-hydrate-${plant.id}" 
+                                  class="hydration-bar-fill h-3 rounded-full" 
+                                  style="width: ${percent}%;">
+                              </div>
+                           </div>
                             <p id="timer-hydrate-${plant.id}" class="text-sm mt-1 font-mono">${secondsRemaining}s restantes</p>
                         </div>
                     `;
@@ -726,15 +909,17 @@
             openSeedModal(potId) {
                 this.state.activePotId = potId;
                 this.state.seedStep = 1;
-                document.getElementById('seed-modal').classList.remove('hidden');
-                document.getElementById('seed-modal').classList.add('flex');
+                const modal = document.getElementById('seed-modal');
+                if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 this.renderSeedStep();
+                this.updateModalCloseVisibility();
             },
 
             closeSeedModal() {
-                document.getElementById('seed-modal').classList.remove('flex');
-                document.getElementById('seed-modal').classList.add('hidden');
+                const modal = document.getElementById('seed-modal');
+                if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
                 this.state.activePotId = null;
+                this.updateModalCloseVisibility();
             },
 
             renderSeedStep() {
@@ -758,13 +943,22 @@
                 document.getElementById('seed-next-btn').disabled = false;
                 
                 if (this.state.seedStep === 5) {
-                    document.getElementById('seed-next-btn').innerHTML = '✅ ¡Terminar!';
-                    document.getElementById('seed-next-btn').classList.remove('bg-green-200');
-                    document.getElementById('seed-next-btn').classList.add('bg-highlight');
+                    // Final step: show a circular check emoji only
+                    const btn = document.getElementById('seed-next-btn');
+                    if (btn) {
+                        btn.innerHTML = '✅';
+                        btn.classList.remove('btn-circle--accent');
+                        btn.classList.add('btn-circle', 'round');
+                        btn.setAttribute('aria-label', 'Terminar');
+                    }
                 } else {
-                    document.getElementById('seed-next-btn').innerHTML = '<span aria-label="Siguiente">→</span>';
-                    document.getElementById('seed-next-btn').classList.remove('bg-highlight');
-                    document.getElementById('seed-next-btn').classList.add('bg-green-200');
+                    const btn = document.getElementById('seed-next-btn');
+                    if (btn) {
+                        btn.innerHTML = '→';
+                        btn.classList.remove('btn-circle--accent');
+                        btn.classList.add('btn-circle', 'round');
+                        btn.setAttribute('aria-label', 'Siguiente');
+                    }
                 }
 
                 console.log(`Reproduciendo audio: ${stepData.audio}`);
@@ -775,7 +969,7 @@
                     this.state.seedStep++;
                     this.renderSeedStep();
                 } else {
-                    this.completeSeeding();
+                    this.completeSeeding(); // Complete the seeding process
                 }
             },
 
@@ -902,18 +1096,19 @@
             openPrunePanel(potId) {
                 this.state.activePotId = potId;
                 const panel = document.getElementById('prune-panel');
-                panel.classList.remove('hidden');
-                panel.classList.add('flex');
+                if (panel) { panel.style.display = 'flex'; panel.classList.remove('hidden'); panel.classList.add('flex'); panel.style.zIndex = 1000 + (++this.modalZ); }
                 this.renderPruneSteps();
+                this.updateModalCloseVisibility();
                 
                 console.log("Reproduciendo audio de consejos de poda.");
                 if (navigator.vibrate) navigator.vibrate(50);
             },
             
             closePrunePanel() {
-                document.getElementById('prune-panel').classList.remove('flex');
-                document.getElementById('prune-panel').classList.add('hidden');
+                const panel = document.getElementById('prune-panel');
+                if (panel) { panel.style.display = 'none'; panel.classList.remove('flex'); panel.classList.add('hidden'); }
                 this.state.activePotId = null;
+                this.updateModalCloseVisibility();
             },
 
             renderPruneSteps() {
@@ -940,18 +1135,19 @@
                 
                 document.getElementById('photo-panel-title').textContent = `📸 Álbum de ${plant.emoji}`;
                 const panel = document.getElementById('photo-panel');
-                panel.classList.remove('hidden');
-                panel.classList.add('flex');
+                if (panel) { panel.style.display = 'flex'; panel.classList.remove('hidden'); panel.classList.add('flex'); panel.style.zIndex = 1000 + (++this.modalZ); }
                 // Guardamos el potId en el input por si el estado cambia antes de la subida
                 const photoInput = document.getElementById('photo-input');
                 if (photoInput) photoInput.dataset.potId = potId;
                 this.renderAlbum(plant);
+                this.updateModalCloseVisibility();
             },
 
             closePhotoPanel() {
-                document.getElementById('photo-panel').classList.remove('flex');
-                document.getElementById('photo-panel').classList.add('hidden');
+                const panel = document.getElementById('photo-panel');
+                if (panel) { panel.style.display = 'none'; panel.classList.remove('flex'); panel.classList.add('hidden'); }
                 this.state.activePotId = null;
+                this.updateModalCloseVisibility();
             },
 
             handlePhotoUpload(event) {
@@ -1031,18 +1227,9 @@
                         <div class="absolute top-2 right-2 flex space-x-2">
                             
                             <!-- Botón Analizar/Lupa -->
-                            <button onclick="event.stopPropagation(); App.openAiModal('${photo.id}')" 
-                                    class="photo-action-btn bg-highlight text-text-color" 
-                                    aria-label="Analizar foto con IA">
-                                🔍
-                            </button>
-                            
-                            <!-- Botón Eliminar -->
-                            <button onclick="event.stopPropagation(); App.deletePhoto('${photo.id}')" 
-                                    class="photo-action-btn bg-red-500 text-white" 
-                                    aria-label="Eliminar foto">
-                                🗑️
-                            </button>
+                                <button onclick="event.stopPropagation(); App.openAiModal('${photo.id}')" class="btn-circle" aria-label="Analizar foto con IA">🔍</button>
+                                <!-- Botón Eliminar -->
+                                <button onclick="event.stopPropagation(); App.deletePhoto('${photo.id}')" class="btn-circle btn-circle--danger" aria-label="Eliminar foto">🗑️</button>
                         </div>
                     </div>
                 `).join('');
@@ -1064,8 +1251,7 @@
                 const scanner = document.getElementById('scanner-animation');
                 
                 tipText.textContent = "Escaneando...";
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
+                if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 scanner.classList.remove('hidden');
                 
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -1078,12 +1264,14 @@
                     
                     console.log(`Reproduciendo audio de consejo AI: ${randomTip.audioComment}`);
                 }, 2000);
+                this.updateModalCloseVisibility();
             },
 
             closeAiModal() {
-                document.getElementById('ai-modal').classList.remove('flex');
-                document.getElementById('ai-modal').classList.add('hidden');
+                const modal = document.getElementById('ai-modal');
+                if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
                 document.getElementById('ai-tip-text').textContent = "";
+                this.updateModalCloseVisibility();
             },
             
             // 5. Expandir Foto (NUEVO)
@@ -1101,8 +1289,7 @@
                 img.src = photo.dataUrl;
                 dateDisplay.textContent = photo.timestamp;
                 
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
+                if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 
                 // Aplicar clase para la animación (pequeño retraso para asegurar que 'display: flex' se aplique primero)
                 setTimeout(() => {
@@ -1110,6 +1297,7 @@
                 }, 50);
 
                 if (navigator.vibrate) navigator.vibrate(20);
+                this.updateModalCloseVisibility();
             },
             
             closeExpandedPhotoModal() {
@@ -1121,9 +1309,31 @@
 
                 // Ocultar después de que termine la transición CSS (300ms)
                 setTimeout(() => {
-                    modal.classList.remove('flex');
-                    modal.classList.add('hidden');
+                    if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
+                    this.updateModalCloseVisibility();
                 }, 300);
+            },
+
+            // Ensure only the top-most modal's close buttons are visible and clickable
+            updateModalCloseVisibility() {
+                const modals = Array.from(document.querySelectorAll('[data-modal="true"]'))
+                    .filter(m => m.style.display !== 'none' && !m.classList.contains('hidden'));
+
+                // Sort by zIndex (numeric) and take highest
+                modals.sort((a,b) => (parseInt(a.style.zIndex||0) - parseInt(b.style.zIndex||0)));
+                const top = modals.length ? modals[modals.length-1] : null;
+
+                // Hide all data-close buttons first
+                document.querySelectorAll('[data-close="true"]').forEach(btn => {
+                    btn.style.display = 'none';
+                });
+
+                // Show close buttons only for top modal
+                if (top) {
+                    Array.from(top.querySelectorAll('[data-close="true"]')).forEach(btn => {
+                        btn.style.display = ''; // revert to CSS inline/default
+                    });
+                }
             },
 
             // --- Lógica de Clima ---
@@ -1264,15 +1474,7 @@
             
             const starsDiv = document.createElement('div');
             starsDiv.className = `star-group ${group.class}`;
-            starsDiv.style.cssText = `
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 1px; 
-                height: 1px; 
-                box-shadow: ${shadow};
-                animation-delay: -${Math.random() * group.delayRange}s; 
-            `;
+            starsDiv.style.cssText = `width: 1px; height: 1px; box-shadow: ${shadow}; animation-delay: -${Math.random() * group.delayRange}s;`;
             starFieldContainer.appendChild(starsDiv);
         });
     },
@@ -1315,6 +1517,60 @@
         window.onload = () => {
             App.init();
         };
+
+        /**
+         * Footer behavior: switch between full and condensed states based on scroll position.
+         * - At very top of page -> full
+         * - In middle (not top nor bottom) -> condensed (authors only)
+         * - At very bottom -> full
+         */
+        function initFooterBehavior() {
+            const footer = document.getElementById('site-footer');
+            if (!footer) return;
+
+            function updateFooterState() {
+                const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                const docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+                const atTop = scrollTop <= 10;
+                const atBottom = (scrollTop + viewportHeight) >= (docHeight - 10);
+
+                if (atTop) {
+                    footer.classList.remove('footer-condensed');
+                    footer.classList.add('footer-full');
+                } else if (atBottom) {
+                    footer.classList.remove('footer-condensed');
+                    footer.classList.add('footer-full');
+                } else {
+                    footer.classList.remove('footer-full');
+                    footer.classList.add('footer-condensed');
+                }
+            }
+
+            // Debounced scroll/resize handler
+            let rafId = null;
+            function scheduleUpdate() {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => { updateFooterState(); rafId = null; });
+            }
+
+            window.addEventListener('scroll', scheduleUpdate, { passive: true });
+            window.addEventListener('resize', scheduleUpdate);
+
+            // Initial state
+            updateFooterState();
+        }
+
+        // Llamar a initFooterBehavior después de inicializar la app
+        (function waitForInit() {
+            if (document.readyState === 'complete') {
+                initFooterBehavior();
+            } else {
+                window.addEventListener('load', () => initFooterBehavior());
+            }
+        })();
+
+        // Normalize any buttons that contain "Entendido" text to the btn-circle style
 
     </script>
 </body>
