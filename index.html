@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <link rel="icon" href="img/logoApp.png" type="png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌱Mi Plantita AI </title>
@@ -319,10 +320,13 @@
 <main class="flex-grow container mx-auto p-4 md:p-8 lg:p-12 z-20 relative">
     
    <!-- <h1 class="text-4xl md:text-5xl font-extrabold text-center">Mi Plantita AI</h1>  -->
-    
+    <img 
+                    src="img/titleLogo.png" 
+                    alt="Mi Plantita AI" 
+                    class="w-64 object-contain mx-auto mb-3">
     <img 
         src="img/logoApp.png" 
-        alt="Logo de Mi Plantita AI" 
+        alt="Maceta de Mi Plantita AI" 
         class="h-64 w-64 object-contain mx-auto mb-3" 
     >
         
@@ -332,23 +336,25 @@
             <div class="flex flex-wrap justify-center gap-4">
                 
                 <button onclick="App.setWeather('day')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-yellow-400" title="Día">
-                <!-- Boton del Sol ☀️-->
+                <!-- Boton  Sol ☀️-->
                 <img 
                     src="img/sunnysun.png" 
-                    alt="Logo de Mi Plantita AI" 
+                    alt="Soleado" 
                     class="h-20 w-20 object-contain mx-auto">
                 </button>
                 
                 <button onclick="App.setWeather('night')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-indigo-400" title="Noche">
+                    <!-- Boton luna 🌙-->
                     <img 
                     src="img/moonymoon.png" 
-                    alt="Logo de Mi Plantita AI" 
+                    alt="Noche" 
                     class="h-32 w-32 object-contain mx-auto">
                 </button>
                 <button onclick="App.setWeather('rainy')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-blue-400" title="Lluvioso">
+                    <!-- Boton nube ☁️-->
                     <img 
                     src="img/cloudycloud.png" 
-                    alt="Logo de Mi Plantita AI" 
+                    alt="Lluvioso" 
                     class="h-20 w-20 object-contain mx-auto">
                 </button>
                 
@@ -369,7 +375,7 @@
                 <img 
                     src="img/titleLogo.png" 
                     alt="Mi Plantita AI" 
-                    class="w-[768px] object-contain">
+                    class="w-64 object-contain">
             </div>
 
             
@@ -377,23 +383,26 @@
                 <img 
                     src="img/logoApp.png" 
                     alt="Mi Plantita AI" 
-                    class="h-64 w-64 object-contain mx-auto">
+                    class="h-24 object-contain mx-auto">
             </div>
 
             
-            <div class="glass-card p-4 mb-6 w-full text-lg">
-                <p class="font-bold text-xl mb-2">Prototipo - EXPOTEC 2025</p>
+            <div class="glass-card p-4 mb-3 w-full text-sm">
+                <p class="font-bold text-lg">Prototipo - EXPOTEC 2025</p>
                 <p>Aplicación desarrollada por</p>
                 <p><span class="font-semibold text-[#D4A373]">Mateo Corrales</span> y <span class="font-semibold text-[#D4A373]">Piero Solano</span></p>
                 <p>de Pasitos Pequeños, Prepa-B 2025.</p>
                 
                 <div class="mt-4 flex justify-center">
-                    <span class="text-4xl">🏛️</span>
+                    <img 
+                    src="img/logoEXPOTEC.png" 
+                    alt="Logo EXPOTEC 2025" 
+                    class="w-20 object-contain mx-auto">
                 </div>
             </div>
 
             
-            <div class="bg-red-100 p-3 rounded-xl border border-red-300 mb-6 text-sm text-red-800">
+            <div class="bg-red-100 p-3 rounded-xl border border-red-300 mb-3 text-sm text-red-800">
                 <p class="font-bold">⚠️ IMPORTANTE:</p>
                 <ul class="list-disc list-inside text-left">
                     <li>Toda la información que compartes con esta app se almacena <span class="font-extrabold">SOLO en tu dispositivo</span>, no compartimos información con terceros.</li>
@@ -403,7 +412,7 @@
             </div>
 
             <button onclick="App.closeWelcomeModal()" 
-                    class="glass-card px-8 py-4 text-2xl font-bold bg-highlight hover:bg-B5F4F7 transition-colors focus:ring-4 focus:ring-highlight/50">
+                    class="glass-card px-8 py-4 text-sm font-bold bg-highlight hover:bg-B5F4F7 transition-colors focus:ring-4 focus:ring-highlight/50">
                 ¡Entendido 👍🏻!
             </button>
         </div>
@@ -465,7 +474,7 @@
                 <p id="photo-limit-text" class="text-xl font-semibold mb-4 md:mb-0">¡Captura el crecimiento de tu planta! (0/9)</p>
                 <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="App.handlePhotoUpload(event)">
                 <button onclick="document.getElementById('photo-input').click()" class="btn-icon btn-small text-4xl bg-yellow-400 hover:bg-yellow-500 transition-colors">
-                    ➕
+                    📸
                 </button>
             </div>
 
@@ -518,10 +527,13 @@
     <!-- Footer Fijo -->
     <footer class="fixed bottom-0 left-0 w-full bg-faedcd text-text-color p-4 text-center border-t-4 border-accent-soft z-40">
         <p class="text-sm md:text-base font-semibold">Desarrollado por Mateo Corrales y Piero Solano</p>
+        <p class="text-sm md:text-base">Cedes don Bosco, Pasitos Pequeños, Prepa-B 2025.</p>
         <div class="mt-1 flex justify-center items-center">
             
-            <img src="data:image/png;base64,iVORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAADmB2WzAAAACXBIWXMAAAsTAAALEwEAmpwYAAABHklEQVR4nO3c0Q3DIAxG4ckwDkYlG4cwRhuoQyU8H72PZg+wWpE0Kj7z33/tQ+4Bf01gBN4A0H8oAgGgCAiAgiIgy/v/Y36WzWv6D4y6QBDcAuQ3x0VAIBAIEAiCAgk/2v7Gv6HwQY1A1y9oXGGUAAAEAAAASUVORK5CYII" 
-                 alt="Logo MP" class="h-8 w-8 object-contain">
+            <img 
+                    src="img/logoEXPOTEC.png" 
+                    alt="Logo de Mi Plantita AI" 
+                    class="w-20 object-contain mx-auto mb-1">
         </div>
     </footer>
 
@@ -554,9 +566,9 @@
         const App = {
             state: {
                 plants: [
-                    { id: 'maceta-1', planted: false, emoji: '🌼', hydrationExpiration: 0, photos: [] },
+                    { id: 'maceta-1', planted: false, emoji: '🌿', hydrationExpiration: 0, photos: [] },
                     { id: 'maceta-2', planted: false, emoji: '🌱', hydrationExpiration: 0, photos: [] },
-                    { id: 'maceta-3', planted: false, emoji: '🌳', hydrationExpiration: 0, photos: [] },
+                    { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] },
                 ],
                 currentWeather: 'day',
                 seedStep: 1,
@@ -787,7 +799,7 @@
             completeSeeding() {
                 const plant = this.state.plants.find(p => p.id === this.state.activePotId);
                 if (plant) {
-                    const availableEmojis = ['🌼', '🌱', '🌳'];
+                    const availableEmojis = ['🌿', '🌱', '🍀'];
                     plant.emoji = availableEmojis[Math.floor(Math.random() * availableEmojis.length)];
                     plant.planted = true;
                     this.hydratePlant(plant.id); 
@@ -852,7 +864,7 @@
                     plant.hydrationExpiration = 0;
                     const percent = 0;
                     barElement.style.width = `${percent}%`;
-                    timerElement.textContent = "¡Sed!";
+                    timerElement.textContent = "¡Tu planta tiene sed!";
                     
                     btnElement.classList.remove('opacity-50');
                     btnElement.classList.add('pulse');
