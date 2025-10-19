@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Plantita AI - Huerto Digital</title>
+    
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Carga de Fuente Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Paleta de colores: #ccd5ae, #e9edc9, #fefae0, #faedcd, #d4a373, #B5F4F7 */
+        :root {
+            --bg-primary: #fefae0;
+            --bg-secondary: #e9edc9;
+            --accent-soft: #ccd5ae;
+            --accent-earth: #d4a373;
+            --highlight: #B5F4F7;
+            --text-color: #384033;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-color);
+            transition: background-color 0.8s ease-in-out;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 6rem; /* Espacio para el footer fijo */
+            overflow-x: hidden; /* Previene scroll horizontal */
+        }
+
+        /* Estilo Vidrio (Glassmorphism sutil) */
+        .glass-panel {
+            background-color: rgba(233, 237, 201, 0.7); /* --bg-secondary con transparencia */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 2rem;
+            box-shadow: 0 6px 15px -3px rgba(56, 64, 51, 0.1), 0 4px 6px -4px rgba(56, 64, 51, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease-in-out;
+        }
+
+        /* Estilo Vidrio para Botones/Tarjetas */
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Botones grandes y accesibles */
+        .btn-icon {
+            width: 5rem;
+            height: 5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem; 
+            border-radius: 9999px;
+            background-color: var(--accent-soft);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        .btn-icon:hover, .btn-icon:focus {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 4px var(--accent-earth);
+            outline: none;
+        }
+        .btn-small {
+            width: 3.5rem;
+            height: 3.5rem;
+            font-size: 1.5rem;
+            border-radius: 50%;
+            background-color: var(--accent-soft);
+        }
+        
+        /* Botones de acción de la foto (pequeños y visibles) */
+        .photo-action-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
+        }
+        .photo-action-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Animación de Pulso (para Hidratar cuando es tiempo) */
+        @keyframes pulse-highlight {
+            0% { box-shadow: 0 0 0 0 rgba(181, 244, 247, 0.7); } 
+            70% { box-shadow: 0 0 0 15px rgba(181, 244, 247, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(181, 244, 247, 0); }
+        }
+        .pulse {
+            animation: pulse-highlight 2s infinite;
+        }
+
+        /* Estilos de Clima */
+        .day { background-color: #fefae0; }
+        .night { background-color: #1a233b; color: #e9edc9; }
+        .rainy { background-color: #ccdbd9; }
+        /* Ajustar paneles para el modo noche */
+        .night .glass-panel, .night .glass-card { 
+            background-color: rgba(33, 44, 69, 0.7); 
+            color: #e9edc9; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* --- Caracteres de Clima (TAMAÑO 45vmin) --- */
+        #weather-character-display {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10; 
+            overflow: hidden; 
+        }
+        .weather-icon-lg {
+            position: absolute;
+            font-size: 45vmin; 
+            opacity: 1;
+            transition: all 1s ease-in-out;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            will-change: transform; 
+            z-index: 15; /* Asegura que la luna esté sobre las estrellas */
+        }
+
+        /* Animaciones de Clima */
+        @keyframes tilt-subtle {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(1deg); } 
+        }
+        @keyframes tilt-moon {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-0.5deg); }
+        }
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); } 
+        }
+        @keyframes pulse-cloud {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.01); } 
+        }
+        @keyframes move-cloud-slow {
+            0% { transform: translateX(-60%); } 
+            100% { transform: translateX(60%); } 
+        }
+        
+        /* Clases para aplicar las animaciones y POSICIONAMIENTO con 45vmin */
+        .anim-sun {
+            animation: tilt-subtle 8s infinite ease-in-out, 
+                       pulse-soft 4s infinite alternate; 
+            top: -10vmin; 
+            left: -10vmin; 
+        }
+        .anim-moon {
+            animation: tilt-moon 12s infinite ease-in-out; 
+            top: -10vmin; 
+            right: -10vmin; 
+        }
+        .anim-cloud {
+            animation: pulse-cloud 2s infinite alternate,
+                       move-cloud-slow 40s linear infinite alternate; 
+            top: -10vmin; 
+            left: 50%;
+        }
+
+        /* --- Animaciones de Estrellas (SOLO OPACIDAD) --- */
+        @keyframes twinkle-group-1 {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 1; }
+        }
+        @keyframes twinkle-group-2 {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+        @keyframes twinkle-group-3 {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.6; }
+        }
+        .star-group {
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 1px;
+            height: 1px; 
+            color: white;
+            will-change: opacity;
+        }
+
+        .star-group.g1 { animation: twinkle-group-1 2.5s infinite alternate; }
+        .star-group.g2 { animation: twinkle-group-2 4s infinite alternate; }
+        .star-group.g3 { animation: twinkle-group-3 6s infinite alternate; }
+        
+        /* --- Toast/Banner de Clima --- */
+        #weather-toast {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, -100%); /* Oculto arriba */
+            background-color: var(--accent-soft);
+            color: var(--text-color);
+            font-weight: 600;
+            border-radius: 0 0 1rem 1rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease-out;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 0.75rem 1.5rem;
+            text-align: center;
+        }
+        #weather-toast.show {
+            transform: translate(-50%, 0); /* Visible */
+            opacity: 1;
+        }
+        
+        /* Otros estilos... */
+        @keyframes scan-animation {
+            0% { transform: scaleY(0); opacity: 0; }
+            50% { transform: scaleY(1); opacity: 1; }
+            100% { transform: scaleY(0); opacity: 0; }
+        }
+        .scanner-bar {
+            animation: scan-animation 1s infinite alternate;
+        }
+        
+        @keyframes fall {
+            from { transform: translateY(-5vh); opacity: 0.7; }
+            to { transform: translateY(105vh); opacity: 0; }
+        }
+
+        .rain-drop {
+            position: absolute;
+            width: 3px; 
+            height: 15px; 
+            background: rgba(30, 144, 255, 0.9); 
+            border-radius: 50%;
+            animation: fall linear infinite; 
+        }
+
+        @keyframes water-drop-anim {
+            0% { transform: translate(-55%, -10px) scale(0.5); opacity: 0; }
+            50% { transform: translate(-55%, 10px) scale(1); opacity: 1; }
+            100% { transform: translate(-55%, 30px) scale(0.5); opacity: 0; }
+        }
+        .water-animation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            background-color: var(--highlight);
+            border-radius: 50%;
+            animation: water-drop-anim 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .hydration-bar-fill {
+            transition: width 1s linear; 
+        }
+        
+        /* Fondo fijo para el footer */
+        footer {
+            background-color: #faedcd !important; 
+            color: var(--text-color); 
+        }
+        
+        /* Estilos para el Modal de Foto Expandida */
+        .expanded-modal-content {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scale(0.9);
+            opacity: 0;
+        }
+        .expanded-modal-show .expanded-modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+    </style>
+</head>
+<body id="app-body" class="flex flex-col min-h-screen">
+
+    <!-- Capa de Caracteres de Clima y Animaciones de Fondo (Estrellas/Lluvia) -->
+    <div id="weather-character-display">
+        
+    </div>
+
+    <!-- Toast de Clima (Notificación) -->
+    <div id="weather-toast" class="glass-panel text-lg font-bold"></div>
+
+    <!-- Contenido Principal -->
+<main class="flex-grow container mx-auto p-4 md:p-8 lg:p-12 z-20 relative">
+    
+   <!-- <h1 class="text-4xl md:text-5xl font-extrabold text-center">Mi Plantita AI</h1>  -->
+    
+    <img 
+        src="img/logoApp.png" 
+        alt="Logo de Mi Plantita AI" 
+        class="h-64 w-64 object-contain mx-auto mb-3" 
+    >
+        
+        <!-- Controles de Clima -->
+        <div id="weather-controls" class="glass-panel p-4 mb-8 max-w-2xl mx-auto flex flex-col items-center relative z-20">
+            <h2 class="text-xl md:text-2xl font-bold mb-4">¿Cómo está el clima?</h2>
+            <div class="flex flex-wrap justify-center gap-4">
+                
+                <button onclick="App.setWeather('day')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-yellow-400" title="Día">
+                <!-- Boton del Sol ☀️-->
+                <img 
+                    src="img/sunnysun.png" 
+                    alt="Logo de Mi Plantita AI" 
+                    class="h-20 w-20 object-contain mx-auto">
+                </button>
+                
+                <button onclick="App.setWeather('night')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-indigo-400" title="Noche">
+                    <img 
+                    src="img/moonymoon.png" 
+                    alt="Logo de Mi Plantita AI" 
+                    class="h-32 w-32 object-contain mx-auto">
+                </button>
+                <button onclick="App.setWeather('rainy')" class="glass-card btn-icon shadow-lg focus:ring-4 focus:ring-blue-400" title="Lluvioso">
+                    <img 
+                    src="img/cloudycloud.png" 
+                    alt="Logo de Mi Plantita AI" 
+                    class="h-20 w-20 object-contain mx-auto">
+                </button>
+                
+            </div>
+        </div>
+
+        <!-- Contenedor del Jardín (Maceteros) -->
+        <div id="garden-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 justify-center relative z-20">
+            
+        </div>
+    </main>
+    
+    <!-- MODAL: Bienvenida -->
+    <div id="welcome-modal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-[99]">
+        <div class="glass-panel p-8 w-full max-w-lg text-center flex flex-col items-center">
+            <div class="flex items-center space-x-4">
+                
+                <img 
+                    src="img/titleLogo.png" 
+                    alt="Mi Plantita AI" 
+                    class="w-[768px] object-contain">
+            </div>
+
+            
+            <div class="text-9xl mb-6">
+                <img 
+                    src="img/logoApp.png" 
+                    alt="Mi Plantita AI" 
+                    class="h-64 w-64 object-contain mx-auto">
+            </div>
+
+            
+            <div class="glass-card p-4 mb-6 w-full text-lg">
+                <p class="font-bold text-xl mb-2">Prototipo - EXPOTEC 2025</p>
+                <p>Aplicación desarrollada por</p>
+                <p><span class="font-semibold text-[#D4A373]">Mateo Corrales</span> y <span class="font-semibold text-[#D4A373]">Piero Solano</span></p>
+                <p>de Pasitos Pequeños, Prepa-B 2025.</p>
+                
+                <div class="mt-4 flex justify-center">
+                    <span class="text-4xl">🏛️</span>
+                </div>
+            </div>
+
+            
+            <div class="bg-red-100 p-3 rounded-xl border border-red-300 mb-6 text-sm text-red-800">
+                <p class="font-bold">⚠️ IMPORTANTE:</p>
+                <ul class="list-disc list-inside text-left">
+                    <li>Toda la información que compartes con esta app se almacena <span class="font-extrabold">SOLO en tu dispositivo</span>, no compartimos información con terceros.</li>
+                    <li>Esta aplicación es un <span class="font-extrabold">PROTOTIPO</span>, puede presentar fallas o funcionalidad incompleta.</li>
+                    <li>Mamá y Papá deben supervisar el uso de esta app <span class="font-extrabold">EN TODO MOMENTO</span>.</li>
+                </ul>
+            </div>
+
+            <button onclick="App.closeWelcomeModal()" 
+                    class="glass-card px-8 py-4 text-2xl font-bold bg-highlight hover:bg-B5F4F7 transition-colors focus:ring-4 focus:ring-highlight/50">
+                ¡Entendido 👍🏻!
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Sembrar -->
+    <div id="seed-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50">
+        <div id="seed-modal-content" class="glass-panel p-6 w-full max-w-md">
+            <h2 class="text-3xl font-bold text-center mb-6">🌱 ¡A Sembrar!</h2>
+            <div id="seed-step-display" class="text-center">
+                
+            </div>
+            <div class="flex justify-between items-center mt-8">
+                <button id="seed-prev-btn" onclick="App.prevSeedStep()" class="glass-card p-3 rounded-full text-2xl" disabled>
+                    <span class="icon-svg" aria-label="Anterior">←</span>
+                </button>
+                <p id="seed-progress" class="text-lg font-semibold">Paso 1 de 5</p>
+                <button id="seed-next-btn" onclick="App.nextSeedStep()" class="glass-card p-3 rounded-full text-2xl bg-green-200">
+                    <span class="icon-svg" aria-label="Siguiente">→</span>
+                </button>
+            </div>
+            <p class="text-center mt-4 text-sm text-gray-600">
+                <span class="font-bold">Nota:</span> ¡Activa el sonido para escuchar los tips!
+            </p>
+        </div>
+    </div>
+    
+    <!-- MODAL: Podar -->
+    <div id="prune-panel" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50">
+        <div class="glass-panel p-6 w-full max-w-md">
+            <div class="flex justify-between items-start">
+                <h2 class="text-3xl font-bold mb-4">✂️ ¡Aprendiendo a Podar!</h2>
+                <button onclick="App.closePrunePanel()" class="text-2xl p-2 rounded-full glass-card hover:bg-red-300 transition-colors">
+                    ❌
+                </button>
+            </div>
+            <div id="prune-step-container" class="space-y-4 text-center">
+                
+            </div>
+            <p class="text-center mt-4 text-lg font-medium text-gray-700">
+                <span class="font-bold">Tip:</span> Recuerda siempre pedir ayuda a un adulto.
+            </p>
+            
+        </div>
+    </div>
+    
+    <!-- MODAL: Álbum de Fotos (Contenedor de miniaturas) -->
+    <div id="photo-panel" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50 overflow-y-auto">
+        <div class="glass-panel p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-6">
+                <h2 id="photo-panel-title" class="text-3xl font-bold">📸 Álbum de Plantita</h2>
+                <button onclick="App.closePhotoPanel()" class="text-2xl p-2 rounded-full glass-card hover:bg-red-300 transition-colors">
+                    ❌
+                </button>
+            </div>
+            
+            <!-- Controles de Subida -->
+            <div class="flex flex-col md:flex-row items-center justify-between glass-card p-4 mb-6">
+                <p id="photo-limit-text" class="text-xl font-semibold mb-4 md:mb-0">¡Captura el crecimiento de tu planta! (0/9)</p>
+                <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="App.handlePhotoUpload(event)">
+                <button onclick="document.getElementById('photo-input').click()" class="btn-icon btn-small text-4xl bg-yellow-400 hover:bg-yellow-500 transition-colors">
+                    ➕
+                </button>
+            </div>
+
+            <!-- Grid de Fotos -->
+            <div id="album-grid" class="grid grid-cols-3 md:grid-cols-6 gap-4 mt-6">
+                
+            </div>
+            
+            <!-- MODAL: Análisis AI (Simulado) -->
+            <div id="ai-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center p-4 z-50">
+                <div class="glass-panel p-8 w-full max-w-md text-center">
+                    <h3 class="text-2xl font-bold mb-4">Analizando... 🧐</h3>
+                    <div id="scanner-animation" class="h-10 relative mb-6">
+                        <div class="absolute inset-0 flex space-x-1 justify-center items-center">
+                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0s;"></div>
+                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0.2s;"></div>
+                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0.4s;"></div>
+                            <div class="scanner-bar w-1 bg-highlight h-full" style="animation-delay: 0.6s;"></div>
+                        </div>
+                    </div>
+                    <p id="ai-tip-text" class="text-2xl font-extrabold text-green-700 h-10"></p>
+                    <button onclick="App.closeAiModal()" class="glass-card px-6 py-2 mt-6 text-xl bg-red-400 hover:bg-red-500 transition-colors">
+                        ¡Entendido!
+                    </button>
+                    
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- MODAL: Foto Expandida con detalles (NUEVO) -->
+    <div id="expanded-photo-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden justify-center items-center p-4 z-[90]">
+        <div id="expanded-photo-content" class="expanded-modal-content glass-panel p-6 w-full max-w-4xl max-h-[95vh] flex flex-col items-center">
+            
+            <button onclick="App.closeExpandedPhotoModal()" class="absolute top-4 right-4 text-3xl p-2 rounded-full glass-card hover:bg-red-300 transition-colors z-10" aria-label="Cerrar">
+                ❌
+            </button>
+            
+            <img id="expanded-photo-img" src="" alt="Foto expandida" class="w-full max-h-[75vh] object-contain rounded-lg shadow-xl mb-4" />
+            
+            <div class="bg-white/80 p-4 rounded-xl w-full max-w-lg text-center shadow-inner">
+                <p class="text-lg font-semibold text-gray-800">Fecha de Subida:</p>
+                <p id="expanded-photo-date" class="text-2xl font-extrabold text-[#D4A373] mt-1"></p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Footer Fijo -->
+    <footer class="fixed bottom-0 left-0 w-full bg-faedcd text-text-color p-4 text-center border-t-4 border-accent-soft z-40">
+        <p class="text-sm md:text-base font-semibold">Desarrollado por Mateo Corrales y Piero Solano</p>
+        <div class="mt-1 flex justify-center items-center">
+            
+            <img src="data:image/png;base64,iVORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAADmB2WzAAAACXBIWXMAAAsTAAALEwEAmpwYAAABHklEQVR4nO3c0Q3DIAxG4ckwDkYlG4cwRhuoQyU8H72PZg+wWpE0Kj7z33/tQ+4Bf01gBN4A0H8oAgGgCAiAgiIgy/v/Y36WzWv6D4y6QBDcAuQ3x0VAIBAIEAiCAgk/2v7Gv6HwQY1A1y9oXGGUAAAEAAAASUVORK5CYII" 
+                 alt="Logo MP" class="h-8 w-8 object-contain">
+        </div>
+    </footer>
+
+
+    <script>
+        // Definición de variables globales para el estado y configuración
+        const DB_NAME = 'miPlantitaAI_state'; 
+        const APP_ID = 'mi-plantita-ai-v1'; 
+        const MAX_PHOTOS = 9;
+        const HYDRATION_DURATION_MS = 60000; // 60 segundos
+        const TOAST_DURATION_MS = 10000; // 10 segundos
+        
+        // Configuración de audios y textos para la función "Lupa/AI"
+        const AI_TIPS = [
+            { text: "¡Estás haciendo un trabajo increíble! Tu planta se ve muy feliz.", audioComment: "AudioGoesHEre: AI Tip 1" },
+            { text: "Recuerda revisar la tierra. ¿Está seca o un poco húmeda?", audioComment: "AudioGoesHEre: AI Tip 2" },
+            { text: "¡Mira esas hojitas nuevas! El sol la está ayudando mucho.", audioComment: "AudioGoesHEre: AI Tip 3" },
+            { text: "Si ves un bichito, no lo asustes. ¡Son parte de la naturaleza!", audioComment: "AudioGoesHEre: AI Tip 4" },
+            { text: "Necesita un poco de aire fresco. ¡Abre la ventana un ratito!", audioComment: "AudioGoesHEre: AI Tip 5" },
+        ];
+        
+        // Definición de Tips de Clima
+        const WEATHER_TIPS = {
+            'day': "☀️ ¡El sol es el alimento de las plantas! Dales luz para que crezcan.",
+            'night': "🌙 ¡Las plantas descansan de noche! Ya no necesitan tanta agua ni sol.",
+            'rainy': "🌧️ ¡Día de lluvia! La naturaleza riega sola. Cuida que no se inunden."
+        };
+
+        // --- Módulo Principal de la Aplicación ---
+        const App = {
+            state: {
+                plants: [
+                    { id: 'maceta-1', planted: false, emoji: '🌼', hydrationExpiration: 0, photos: [] },
+                    { id: 'maceta-2', planted: false, emoji: '🌱', hydrationExpiration: 0, photos: [] },
+                    { id: 'maceta-3', planted: false, emoji: '🌳', hydrationExpiration: 0, photos: [] },
+                ],
+                currentWeather: 'day',
+                seedStep: 1,
+                activePotId: null, 
+                hydrationIntervals: {}
+            },
+
+            // --- Persistencia (localStorage) ---
+            saveState() {
+                localStorage.setItem(APP_ID, JSON.stringify(this.state));
+            },
+
+            loadState() {
+                const storedState = localStorage.getItem(APP_ID);
+                if (storedState) {
+                    const loadedState = JSON.parse(storedState);
+                    this.state.plants = loadedState.plants || this.state.plants;
+                    this.state.currentWeather = loadedState.currentWeather || this.state.currentWeather;
+                    this.state.plants.forEach(p => {
+                        if (p.planted && p.hydrationExpiration > 0) {
+                            const remaining = p.hydrationExpiration - Date.now();
+                            if (remaining <= 0) {
+                                p.hydrationExpiration = 0; 
+                            }
+                        }
+                    });
+                }
+            },
+            
+            // --- Lógica del Pop-up de Bienvenida ---
+            showWelcomeModal() {
+                document.getElementById('welcome-modal').classList.remove('hidden');
+            },
+
+            closeWelcomeModal() {
+                document.getElementById('welcome-modal').classList.add('hidden');
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+
+            // --- Inicialización ---
+            init() {
+                this.loadState();
+                this.renderGarden();
+                // Usamos el estado cargado, pero forzamos el renderizado del clima
+                this.setWeather(this.state.currentWeather, false); // false para no mostrar el toast al iniciar
+                this.setupHydrationTimers();
+                
+                this.showWelcomeModal();
+                
+                // Carga de fotos de prueba si no hay
+                this.loadMockPhotosIfEmpty();
+            },
+            
+            // Función para cargar fotos de prueba (Base64 placeholder)
+            loadMockPhotosIfEmpty() {
+                if (this.state.plants.every(p => p.photos.length === 0)) {
+                    const mockPhoto1 = {
+                        id: Date.now().toString() + 'm1',
+                        dataUrl: 'https://placehold.co/400x300/ccd5ae/384033?text=Brote+Inicial',
+                        timestamp: new Date(Date.now() - 86400000 * 2).toLocaleString('es-ES')
+                    };
+                    const mockPhoto2 = {
+                        id: Date.now().toString() + 'm2',
+                        dataUrl: 'https://placehold.co/400x300/d4a373/e9edc9?text=Creciendo+Fuerte',
+                        timestamp: new Date(Date.now() - 86400000).toLocaleString('es-ES')
+                    };
+                    
+                    // Añadir a la primera maceta
+                    this.state.plants[0].photos.push(mockPhoto1);
+                    this.state.plants[0].photos.push(mockPhoto2);
+                    this.saveState();
+                }
+            },
+
+
+            // --- Rendering Principal ---
+            renderGarden() {
+                const container = document.getElementById('garden-container');
+                container.innerHTML = this.state.plants.map(plant => this.renderPot(plant)).join('');
+            },
+
+            renderPot(plant) {
+                const potClass = 'glass-card p-6 text-center flex flex-col items-center justify-between h-full';
+                const buttonBaseClass = 'btn-small shadow-md hover:scale-105 active:scale-95 transition-transform duration-200';
+
+                let content;
+                if (!plant.planted) {
+                    // Estado: Vacío
+                    content = `
+                        <div class="flex-grow flex flex-col justify-center items-center">
+                            
+                            <span class="text-6xl mb-4">🕳️</span>
+                            <p class="text-xl font-semibold mb-6">Maceta vacía, ¿Quieres sembrar?</p>
+                            <button onclick="App.openSeedModal('${plant.id}')" class="${buttonBaseClass} text-2xl bg-d4a373 text-white">
+                                🪏
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Estado: Plantado
+                    const isDry = plant.hydrationExpiration <= Date.now();
+                    const timeRemaining = Math.max(0, plant.hydrationExpiration - Date.now());
+                    const secondsRemaining = Math.ceil(timeRemaining / 1000);
+                    const percent = Math.min(100, (secondsRemaining / (HYDRATION_DURATION_MS / 1000)) * 100);
+                    
+                    const hydrateBtnClasses = [
+                        `${buttonBaseClass} bg-blue-400 text-white`,
+                        isDry ? 'pulse' : 'opacity-50' 
+                    ].join(' ');
+                    const hydrateTooltip = isDry ? '¡Necesita agua!' : `Aún le quedan ${secondsRemaining}s`;
+
+                    content = `
+                        <div class="flex-grow flex flex-col justify-between items-center w-full relative">
+                            
+                            <!-- Botón de Eliminar Planta -->
+                            <button onclick="App.deletePlant('${plant.id}')" 
+                                    class="absolute top-0 right-0 w-8 h-8 flex items-center justify-center bg-red-400 text-white rounded-full shadow-md hover:bg-red-600 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 z-10" 
+                                    title="Eliminar Planta"
+                                    aria-label="Eliminar planta">
+                                &times;
+                            </button>
+
+                            <div id="plant-visual-${plant.id}" class="text-[6rem] transition-transform duration-500 hover:scale-105">
+                                
+                                <span>${plant.emoji}</span>
+                            </div>
+                            
+                            <!-- Botones de Acción de Planta -->
+                            <div class="flex space-x-2 mt-4">
+                                
+                                <button id="btn-hydrate-${plant.id}" onclick="App.hydratePlant('${plant.id}')" 
+                                        class="${hydrateBtnClasses}" 
+                                        title="${hydrateTooltip}" 
+                                        aria-label="Hidratar">
+                                    💧
+                                </button>
+                                
+                                <button onclick="App.openPrunePanel('${plant.id}')" class="${buttonBaseClass} bg-green-400 text-white" aria-label="Podar">
+                                    ✂️
+                                </button>
+                                
+                                <button onclick="App.openPhotoPanel('${plant.id}')" class="${buttonBaseClass} bg-yellow-400 text-white" aria-label="Fotografiar">
+                                    📸
+                                </button>
+                            </div>
+
+                            <!-- Barra de Hidratación -->
+                            <div class="w-full mt-4 bg-gray-300 rounded-full h-3">
+                                <div id="bar-hydrate-${plant.id}" 
+                                     class="hydration-bar-fill h-3 rounded-full bg-blue-500" 
+                                     style="width: ${percent}%;">
+                                </div>
+                            </div>
+                            <p id="timer-hydrate-${plant.id}" class="text-sm mt-1 font-mono">${secondsRemaining}s restantes</p>
+                        </div>
+                    `;
+                }
+
+                return `<div id="${plant.id}" class="${potClass}">${content}</div>`;
+            },
+            
+            // --- Lógica de la Planta (Hidratar, Sembrar, Podar, Álbum) ---
+            
+            // 1. Sembrar (Planting)
+            openSeedModal(potId) {
+                this.state.activePotId = potId;
+                this.state.seedStep = 1;
+                document.getElementById('seed-modal').classList.remove('hidden');
+                document.getElementById('seed-modal').classList.add('flex');
+                this.renderSeedStep();
+            },
+
+            closeSeedModal() {
+                document.getElementById('seed-modal').classList.remove('flex');
+                document.getElementById('seed-modal').classList.add('hidden');
+                this.state.activePotId = null;
+            },
+
+            renderSeedStep() {
+                const steps = [
+                    { emoji: '🧤', text: "Paso 1: Prepara tus herramientas como pala y guantes.", audio: "AudioGoesHEre: Sembrar Paso 1" },
+                    { emoji: '🤏', text: "Paso 2: Haz un hoyito en la tierra con cuidado. No muy profundo.", audio: "AudioGoesHEre: Sembrar Paso 2" },
+                    { emoji: '🌰', text: "Paso 3: Coloca la semilla o la plantita en el hoyito.", audio: "AudioGoesHEre: Sembrar Paso 3" },
+                    { emoji: '💦', text: "Paso 4: Tapa con tierra y riega un poquito de agua.", audio: "AudioGoesHEre: Sembrar Paso 4" },
+                    { emoji: '🎉', text: "Paso 5: ¡Listo! Tu planta ya tiene una nueva casa.", audio: "AudioGoesHEre: Sembrar Paso 5" },
+                ];
+                const currentStep = this.state.seedStep - 1;
+                const stepData = steps[currentStep];
+
+                document.getElementById('seed-step-display').innerHTML = `
+                    <div class="text-7xl mb-4 transition-transform duration-300">${stepData.emoji}</div>
+                    <p class="text-xl md:text-2xl font-semibold">${stepData.text}</p>
+                `;
+                document.getElementById('seed-progress').textContent = `Paso ${this.state.seedStep} de 5`;
+                
+                document.getElementById('seed-prev-btn').disabled = this.state.seedStep === 1;
+                document.getElementById('seed-next-btn').disabled = false;
+                
+                if (this.state.seedStep === 5) {
+                    document.getElementById('seed-next-btn').innerHTML = '✅ ¡Terminar!';
+                    document.getElementById('seed-next-btn').classList.remove('bg-green-200');
+                    document.getElementById('seed-next-btn').classList.add('bg-highlight');
+                } else {
+                    document.getElementById('seed-next-btn').innerHTML = '<span aria-label="Siguiente">→</span>';
+                    document.getElementById('seed-next-btn').classList.remove('bg-highlight');
+                    document.getElementById('seed-next-btn').classList.add('bg-green-200');
+                }
+
+                console.log(`Reproduciendo audio: ${stepData.audio}`);
+            },
+
+            nextSeedStep() {
+                if (this.state.seedStep < 5) {
+                    this.state.seedStep++;
+                    this.renderSeedStep();
+                } else {
+                    this.completeSeeding();
+                }
+            },
+
+            prevSeedStep() {
+                if (this.state.seedStep > 1) {
+                    this.state.seedStep--;
+                    this.renderSeedStep();
+                }
+            },
+
+            completeSeeding() {
+                const plant = this.state.plants.find(p => p.id === this.state.activePotId);
+                if (plant) {
+                    const availableEmojis = ['🌼', '🌱', '🌳'];
+                    plant.emoji = availableEmojis[Math.floor(Math.random() * availableEmojis.length)];
+                    plant.planted = true;
+                    this.hydratePlant(plant.id); 
+                }
+                this.closeSeedModal();
+                this.saveState();
+                this.renderGarden();
+                this.setupHydrationTimers();
+            },
+
+            deletePlant(potId) {
+                const plant = this.state.plants.find(p => p.id === potId);
+                if (!plant) return;
+
+                // Parar el intervalo de hidratación para esta planta
+                if (this.state.hydrationIntervals[potId]) {
+                    clearInterval(this.state.hydrationIntervals[potId]);
+                    delete this.state.hydrationIntervals[potId];
+                }
+
+                // Reiniciar el estado de la planta
+                plant.planted = false;
+                plant.hydrationExpiration = 0;
+                plant.photos = [];
+                
+                this.saveState();
+                this.renderGarden(); // Re-renderizar para mostrar la maceta vacía
+
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+
+            // 2. Hidratar (Hydrating)
+            setupHydrationTimers() {
+                Object.values(this.state.hydrationIntervals).forEach(clearInterval);
+                this.state.hydrationIntervals = {};
+
+                this.state.plants.forEach(plant => {
+                    if (plant.planted) {
+                        const intervalId = setInterval(() => {
+                            this.updateHydrationStatus(plant.id);
+                        }, 1000);
+                        this.state.hydrationIntervals[plant.id] = intervalId;
+                        this.updateHydrationStatus(plant.id);
+                    }
+                });
+            },
+
+            updateHydrationStatus(potId) {
+                const plant = this.state.plants.find(p => p.id === potId);
+                if (!plant || !plant.planted) return;
+                
+                const barElement = document.getElementById(`bar-hydrate-${potId}`);
+                const timerElement = document.getElementById(`timer-hydrate-${potId}`);
+                const btnElement = document.getElementById(`btn-hydrate-${potId}`);
+                
+                if (!barElement || !btnElement) return;
+
+                const timeRemaining = Math.max(0, plant.hydrationExpiration - Date.now());
+                const secondsRemaining = Math.ceil(timeRemaining / 1000);
+                
+                if (secondsRemaining <= 0) {
+                    plant.hydrationExpiration = 0;
+                    const percent = 0;
+                    barElement.style.width = `${percent}%`;
+                    timerElement.textContent = "¡Sed!";
+                    
+                    btnElement.classList.remove('opacity-50');
+                    btnElement.classList.add('pulse');
+                    btnElement.title = "¡Necesita agua!";
+                } else {
+                    const percent = (secondsRemaining / (HYDRATION_DURATION_MS / 1000)) * 100;
+                    barElement.style.width = `${percent}%`;
+                    timerElement.textContent = `${secondsRemaining}s restantes`;
+
+                    btnElement.classList.remove('pulse');
+                    btnElement.classList.add('opacity-50');
+                    btnElement.title = `Aún le quedan ${secondsRemaining}s`;
+                }
+
+                this.saveState();
+            },
+
+            hydratePlant(potId) {
+                const plant = this.state.plants.find(p => p.id === potId);
+                
+                if (!plant || !plant.planted || plant.hydrationExpiration > Date.now()) {
+                    return; 
+                }
+
+                plant.hydrationExpiration = Date.now() + HYDRATION_DURATION_MS;
+                this.saveState();
+                this.updateHydrationStatus(potId);
+
+                const potElement = document.getElementById(potId);
+                if (potElement) {
+                    const drop = document.createElement('div');
+                    drop.className = 'water-animation';
+                    potElement.appendChild(drop);
+                    setTimeout(() => drop.remove(), 1000);
+                }
+
+                console.log("Reproduciendo audio de agua.");
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+            
+            // 3. Podar (Pruning)
+            openPrunePanel(potId) {
+                this.state.activePotId = potId;
+                const panel = document.getElementById('prune-panel');
+                panel.classList.remove('hidden');
+                panel.classList.add('flex');
+                this.renderPruneSteps();
+                
+                console.log("Reproduciendo audio de consejos de poda.");
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+            
+            closePrunePanel() {
+                document.getElementById('prune-panel').classList.remove('flex');
+                document.getElementById('prune-panel').classList.add('hidden');
+                this.state.activePotId = null;
+            },
+
+            renderPruneSteps() {
+                const steps = [
+                    { emoji: '🌿', text: "Busca las hojas que se vean amarillas o secas. ¡Ya cumplieron su ciclo!" },
+                    { emoji: '📏', text: "Corta solo con tijeras de podar (¡pide ayuda!) y cerca del tallo principal." },
+                    { emoji: '💪', text: "Podar ayuda a que tu plantita crezca más fuerte y bonita." },
+                ];
+                
+                const container = document.getElementById('prune-step-container');
+                container.innerHTML = steps.map(step => `
+                    <div class="glass-card p-4 flex items-center space-x-4">
+                        <span class="text-4xl">${step.emoji}</span>
+                        <p class="text-lg text-left font-medium">${step.text}</p>
+                    </div>
+                `).join('');
+            },
+
+            // 4. Fotografiar (Photo Album)
+            openPhotoPanel(potId) {
+                this.state.activePotId = potId;
+                const plant = this.state.plants.find(p => p.id === potId);
+                if (!plant) return;
+                
+                document.getElementById('photo-panel-title').textContent = `📸 Álbum de ${plant.emoji}`;
+                const panel = document.getElementById('photo-panel');
+                panel.classList.remove('hidden');
+                panel.classList.add('flex');
+                this.renderAlbum(plant);
+            },
+
+            closePhotoPanel() {
+                document.getElementById('photo-panel').classList.remove('flex');
+                document.getElementById('photo-panel').classList.add('hidden');
+                this.state.activePotId = null;
+            },
+
+            handlePhotoUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const plant = this.state.plants.find(p => p.id === this.state.activePotId);
+                
+                if (!plant || plant.photos.length >= MAX_PHOTOS) {
+                    document.getElementById('photo-limit-text').textContent = `¡Álbum lleno! (${MAX_PHOTOS}/${MAX_PHOTOS})`;
+                    console.error('Álbum lleno (Max 9 fotos).'); 
+                    event.target.value = ''; 
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const newPhoto = {
+                        id: Date.now().toString(),
+                        dataUrl: e.target.result,
+                        // Guardamos la fecha/hora formateada para mostrarla fácilmente
+                        timestamp: new Date().toLocaleString('es-ES') 
+                    };
+                    plant.photos.push(newPhoto);
+                    this.saveState();
+                    this.renderAlbum(plant);
+                };
+                reader.readAsDataURL(file);
+
+                event.target.value = ''; 
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+
+            renderAlbum(plant) {
+                const grid = document.getElementById('album-grid');
+                
+                document.getElementById('photo-limit-text').textContent = 
+                    `¡Captura el crecimiento de tu planta! (${plant.photos.length}/${MAX_PHOTOS})`;
+
+
+                grid.innerHTML = plant.photos.map(photo => `
+                    <div class="relative glass-card aspect-square overflow-hidden shadow-lg">
+                        
+                        <!-- Miniatura clickeable para expandir -->
+                        <img src="${photo.dataUrl}" 
+                             alt="Foto de ${plant.emoji}" 
+                             class="w-full h-full object-cover cursor-pointer transition duration-300 hover:opacity-80"
+                             onclick="App.expandPhoto('${photo.id}')"
+                             onerror="this.onerror=null; this.src='https://placehold.co/400x300/475569/FFFFFF?text=Error+Carga';"
+                        >
+                        
+                        <!-- Botones de Acción (Visibles) -->
+                        <div class="absolute top-2 right-2 flex space-x-2">
+                            
+                            <!-- Botón Analizar/Lupa -->
+                            <button onclick="event.stopPropagation(); App.openAiModal('${photo.id}')" 
+                                    class="photo-action-btn bg-highlight text-text-color" 
+                                    aria-label="Analizar foto con IA">
+                                🔍
+                            </button>
+                            
+                            <!-- Botón Eliminar -->
+                            <button onclick="event.stopPropagation(); App.deletePhoto('${photo.id}')" 
+                                    class="photo-action-btn bg-red-500 text-white" 
+                                    aria-label="Eliminar foto">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            deletePhoto(photoId) {
+                const plant = this.state.plants.find(p => p.id === this.state.activePotId);
+                if (!plant) return;
+                plant.photos = plant.photos.filter(p => p.id !== photoId);
+                this.saveState();
+                this.renderAlbum(plant);
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+            
+            // Lupa / AI Simulado
+            openAiModal(photoId) {
+                const modal = document.getElementById('ai-modal');
+                const tipText = document.getElementById('ai-tip-text');
+                const scanner = document.getElementById('scanner-animation');
+                
+                tipText.textContent = "Escaneando...";
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                scanner.classList.remove('hidden');
+                
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+                setTimeout(() => {
+                    scanner.classList.add('hidden');
+                    
+                    const randomTip = AI_TIPS[Math.floor(Math.random() * AI_TIPS.length)];
+                    tipText.textContent = randomTip.text;
+                    
+                    console.log(`Reproduciendo audio de consejo AI: ${randomTip.audioComment}`);
+                }, 2000);
+            },
+
+            closeAiModal() {
+                document.getElementById('ai-modal').classList.remove('flex');
+                document.getElementById('ai-modal').classList.add('hidden');
+                document.getElementById('ai-tip-text').textContent = "";
+            },
+            
+            // 5. Expandir Foto (NUEVO)
+            expandPhoto(photoId) {
+                const plant = this.state.plants.find(p => p.id === this.state.activePotId);
+                const photo = plant ? plant.photos.find(p => p.id === photoId) : null;
+                
+                if (!photo) return;
+                
+                const modal = document.getElementById('expanded-photo-modal');
+                const img = document.getElementById('expanded-photo-img');
+                const dateDisplay = document.getElementById('expanded-photo-date');
+                const content = document.getElementById('expanded-photo-content');
+
+                img.src = photo.dataUrl;
+                dateDisplay.textContent = photo.timestamp;
+                
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                
+                // Aplicar clase para la animación (pequeño retraso para asegurar que 'display: flex' se aplique primero)
+                setTimeout(() => {
+                    content.parentElement.classList.add('expanded-modal-show');
+                }, 50);
+
+                if (navigator.vibrate) navigator.vibrate(20);
+            },
+            
+            closeExpandedPhotoModal() {
+                const modal = document.getElementById('expanded-photo-modal');
+                const content = document.getElementById('expanded-photo-content');
+                
+                // Iniciar animación de salida
+                content.parentElement.classList.remove('expanded-modal-show');
+
+                // Ocultar después de que termine la transición CSS (300ms)
+                setTimeout(() => {
+                    modal.classList.remove('flex');
+                    modal.classList.add('hidden');
+                }, 300);
+            },
+
+            // --- Lógica de Clima ---
+    setWeather(weather, showToast = true) {
+        this.state.currentWeather = weather;
+        this.saveState();
+
+        const body = document.getElementById('app-body');
+        
+        body.classList.remove('day', 'night', 'rainy');
+        this.removeWeatherCharacters(); 
+        this.removeRainAnimation();
+        this.removeStarAnimation(); 
+        
+        let tip = WEATHER_TIPS[weather];
+        let animationClass = '';
+        let color = '';
+        let imagePath = ''; // Ahora guarda la ruta de la imagen
+        let audioComment = '';
+
+        switch (weather) {
+            case 'day':
+                body.classList.add('day');
+                imagePath = 'img/sunnysun.png'; // ☀️ RUTA DE IMAGEN
+                color = '#FFC300';
+                animationClass = 'anim-sun'; 
+                audioComment = "AudioGoesHEre: Clima Día";
+                break;
+            case 'night':
+                body.classList.add('night');
+                imagePath = 'img/moonymoon.png'; // 🌙 RUTA DE IMAGEN
+                color = '#e9edc9';
+                animationClass = 'anim-moon'; 
+                audioComment = "AudioGoesHEre: Clima Noche";
+                this.startStarAnimation(); 
+                break;
+            case 'rainy':
+                body.classList.add('rainy');
+                imagePath = 'img/cloudycloud.png'; // 🌧️ RUTA DE IMAGEN
+                color = '#6495ED';
+                animationClass = 'anim-cloud';
+                audioComment = "AudioGoesHEre: Clima Lluvioso";
+                this.startRainAnimation();
+                break;
+        }
+        
+        this.addWeatherCharacter(imagePath, animationClass, color); // Usa imagePath
+        
+        if (showToast) {
+            this.showWeatherToast(tip);
+        }
+        
+        console.log(`Reproduciendo audio de clima: ${audioComment}`);
+    },
+    
+    // Muestra el tip de clima como un Toast temporal por 10 segundos
+    showWeatherToast(tip) {
+        const toast = document.getElementById('weather-toast');
+        
+        toast.classList.remove('show');
+        
+        setTimeout(() => {
+            toast.textContent = tip;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, TOAST_DURATION_MS); 
+        }, 100); 
+    },
+
+    addWeatherCharacter(imagePath, animationClass = '', color) {
+        const charDisplay = document.getElementById('weather-character-display');
+        
+        // Asegura que el ícono se añada al final
+        const iconDiv = document.createElement('div');
+        iconDiv.className = `weather-icon-lg w-[45vmin] h-[45vmin] ${animationClass}`;
+        // Nota: Se elimina el color CSS porque es una imagen, no texto/emoji
+        // iconDiv.style.cssText = `color: ${color};`; 
+        
+        // **CAMBIO CLAVE: Usamos la etiqueta <img> para mostrar la imagen**
+        iconDiv.innerHTML = `<img src="${imagePath}" alt="Ícono de Clima" class="w-full h-full object-contain" />`;
+        
+        charDisplay.appendChild(iconDiv);
+    },
+
+    removeWeatherCharacters() {
+        document.getElementById('weather-character-display').innerHTML = '';
+    },
+    
+    // Función para el efecto estrellado 
+    startStarAnimation() {
+        this.removeStarAnimation(); 
+        const charDisplay = document.getElementById('weather-character-display');
+        
+        const starFieldContainer = document.createElement('div');
+        starFieldContainer.id = 'star-field';
+        starFieldContainer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;'; 
+        charDisplay.appendChild(starFieldContainer);
+
+        const groupsConfig = [
+            { count: 100, class: 'g1', delayRange: 2.5 }, 
+            { count: 100, class: 'g2', delayRange: 4 },   
+            { count: 100, class: 'g3', delayRange: 6 }    
+        ];
+
+        groupsConfig.forEach(group => {
+            let shadow = '';
+            const starSize = '0.5px'; 
+            
+            for (let i = 0; i < group.count; i++) {
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                
+                shadow += `${x}vw ${y}vh 0 ${starSize} #ffffff${i < group.count - 1 ? ',' : ''}`;
+            }
+            
+            const starsDiv = document.createElement('div');
+            starsDiv.className = `star-group ${group.class}`;
+            starsDiv.style.cssText = `
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 1px; 
+                height: 1px; 
+                box-shadow: ${shadow};
+                animation-delay: -${Math.random() * group.delayRange}s; 
+            `;
+            starFieldContainer.appendChild(starsDiv);
+        });
+    },
+
+    removeStarAnimation() {
+        const starField = document.getElementById('star-field');
+        if (starField) {
+            starField.remove();
+        }
+    },
+    
+    // Animación de lluvia sutil
+    startRainAnimation() {
+        this.removeRainAnimation(); 
+        const rainContainer = document.createElement('div');
+        rainContainer.id = 'rain-container';
+        rainContainer.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: hidden;';
+        document.body.appendChild(rainContainer);
+
+        for (let i = 0; i < 60; i++) { 
+            const drop = document.createElement('div');
+            drop.className = 'rain-drop opacity-70';
+            drop.style.left = `${Math.random() * 100}vw`;
+            
+            drop.style.animationDuration = `${0.8 + Math.random() * 1.5}s`;
+            drop.style.animationDelay = `-${Math.random() * 2}s`;
+            rainContainer.appendChild(drop);
+        }
+    },
+
+    removeRainAnimation() {
+        const rainContainer = document.getElementById('rain-container');
+        if (rainContainer) {
+            rainContainer.remove();
+        }
+    }
+}
+
+        // Inicializar la aplicación al cargar la ventana
+        window.onload = () => {
+            App.init();
+        };
+
+    </script>
+</body>
+</html>
+
