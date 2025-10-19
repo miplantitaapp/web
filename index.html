@@ -315,6 +315,8 @@
 
     <!-- Toast de Clima (Notificación) -->
     <div id="weather-toast" class="glass-panel text-lg font-bold"></div>
+    <!-- Toast reutilizable para mensajes (clima, agua, etc.) -->
+    <div id="app-toast" class="glass-panel text-lg font-bold" style="display:none; position:fixed; top:0; left:50%; transform:translate(-50%,-100%); z-index:60;"></div>
 
     <!-- Contenido Principal -->
 <main class="flex-grow container mx-auto p-4 md:p-8 lg:p-12 z-20 relative">
@@ -578,7 +580,12 @@
 
             // --- Persistencia (localStorage) ---
             saveState() {
-                localStorage.setItem(APP_ID, JSON.stringify(this.state));
+                try {
+                    localStorage.setItem(APP_ID, JSON.stringify(this.state));
+                } catch (err) {
+                    // No mostrar toasts aquí; solo log para debugging. Evita que el error rompa la ejecución.
+                    console.error('saveState: error saving to localStorage', err);
+                }
             },
 
             loadState() {
@@ -618,29 +625,12 @@
                 
                 this.showWelcomeModal();
                 
-                // Carga de fotos de prueba si no hay
-                this.loadMockPhotosIfEmpty();
+                // No cargamos fotos de prueba: el usuario debe subir sus propias fotos.
             },
             
             // Función para cargar fotos de prueba (Base64 placeholder)
             loadMockPhotosIfEmpty() {
-                if (this.state.plants.every(p => p.photos.length === 0)) {
-                    const mockPhoto1 = {
-                        id: Date.now().toString() + 'm1',
-                        dataUrl: 'https://placehold.co/400x300/ccd5ae/384033?text=Brote+Inicial',
-                        timestamp: new Date(Date.now() - 86400000 * 2).toLocaleString('es-ES')
-                    };
-                    const mockPhoto2 = {
-                        id: Date.now().toString() + 'm2',
-                        dataUrl: 'https://placehold.co/400x300/d4a373/e9edc9?text=Creciendo+Fuerte',
-                        timestamp: new Date(Date.now() - 86400000).toLocaleString('es-ES')
-                    };
-                    
-                    // Añadir a la primera maceta
-                    this.state.plants[0].photos.push(mockPhoto1);
-                    this.state.plants[0].photos.push(mockPhoto2);
-                    this.saveState();
-                }
+                // Intencionalmente vacío: no cargar imágenes de ejemplo.
             },
 
 
@@ -903,6 +893,9 @@
 
                 console.log("Reproduciendo audio de agua.");
                 if (navigator.vibrate) navigator.vibrate(50);
+
+                // Mostrar tooltip reutilizable con el mismo estilo que el toast de clima
+                this.showTooltip('Asegurate que la tierra de tu plantita queda muy humeda!', { duration: 3500 });
             },
             
             // 3. Podar (Pruning)
@@ -949,6 +942,9 @@
                 const panel = document.getElementById('photo-panel');
                 panel.classList.remove('hidden');
                 panel.classList.add('flex');
+                // Guardamos el potId en el input por si el estado cambia antes de la subida
+                const photoInput = document.getElementById('photo-input');
+                if (photoInput) photoInput.dataset.potId = potId;
                 this.renderAlbum(plant);
             },
 
@@ -962,9 +958,14 @@
                 const file = event.target.files[0];
                 if (!file) return;
 
-                const plant = this.state.plants.find(p => p.id === this.state.activePotId);
-                
-                if (!plant || plant.photos.length >= MAX_PHOTOS) {
+                // Determinar el potId: preferimos el estado activo, si no existe usamos el dataset del input
+                const inputEl = event.target;
+                const plantId = this.state.activePotId || (inputEl && inputEl.dataset && inputEl.dataset.potId) || null;
+                const plant = this.state.plants.find(p => p.id === plantId);
+
+                if (!plant) return;
+
+                if (plant.photos.length >= MAX_PHOTOS) {
                     document.getElementById('photo-limit-text').textContent = `¡Álbum lleno! (${MAX_PHOTOS}/${MAX_PHOTOS})`;
                     console.error('Álbum lleno (Max 9 fotos).'); 
                     event.target.value = ''; 
@@ -976,22 +977,41 @@
                     const newPhoto = {
                         id: Date.now().toString(),
                         dataUrl: e.target.result,
-                        // Guardamos la fecha/hora formateada para mostrarla fácilmente
                         timestamp: new Date().toLocaleString('es-ES') 
                     };
-                    plant.photos.push(newPhoto);
+
+                    // Re-query plant in case state changed
+                    const p = this.state.plants.find(x => x.id === plantId);
+                    if (!p) {
+                        console.error('Plant not found when processing uploaded photo', plantId);
+                        event.target.value = '';
+                        return;
+                    }
+
+
+                    p.photos.push(newPhoto);
+
+                    // Guardar y renderizar inmediatamente
                     this.saveState();
-                    this.renderAlbum(plant);
+                    console.log('Foto guardada en estado para maceta:', p.id, 'total fotos:', p.photos.length);
+                    this.renderAlbum(p);
+
+                    // Clear the file input after processing
+                    event.target.value = '';
+                    if (navigator.vibrate) navigator.vibrate(50);
                 };
                 reader.readAsDataURL(file);
-
-                event.target.value = ''; 
-                if (navigator.vibrate) navigator.vibrate(50);
             },
 
             renderAlbum(plant) {
+                // Si no nos pasan la planta, requery desde el estado activo
+                if (!plant) {
+                    const pid = this.state.activePotId;
+                    plant = this.state.plants.find(p => p.id === pid) || { photos: [], emoji: '🌿', id: pid };
+                }
+
                 const grid = document.getElementById('album-grid');
-                
+
                 document.getElementById('photo-limit-text').textContent = 
                     `¡Captura el crecimiento de tu planta! (${plant.photos.length}/${MAX_PHOTOS})`;
 
@@ -1173,6 +1193,27 @@
                 toast.classList.remove('show');
             }, TOAST_DURATION_MS); 
         }, 100); 
+    },
+
+    // Toast reutilizable para la app — reutiliza el #weather-toast (mismo estilo/animación)
+    showTooltip(text, options = {}) {
+        const duration = options.duration || 3000;
+        const toast = document.getElementById('weather-toast');
+        if (!toast) return;
+
+        // Aseguramos que el toast vuelva a su estado oculto
+        toast.classList.remove('show');
+
+        setTimeout(() => {
+            toast.textContent = text;
+            toast.classList.add('show');
+
+            // Limpiar cualquier timeout previo
+            clearTimeout(this._appToastTimeout);
+            this._appToastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }, 100);
     },
 
     addWeatherCharacter(imagePath, animationClass = '', color) {
