@@ -797,6 +797,58 @@
             'rainy': "🌧️ ¡Día de lluvia! La naturaleza riega sola. Cuida que no se inunden."
         };
 
+        // 🥥 Configuración base centralizada para evitar repeticiones y mantener orden tico.
+        const RANDOM_POT_IMAGES = Object.freeze(['img/pot-ran1.png', 'img/pot-ran2.png', 'img/pot-ran3.png']);
+        const RANDOM_PLANT_EMOJIS = Object.freeze(['🌿', '🌱', '🍀']);
+        const DOM_IDS = Object.freeze({
+            gardenContainer: 'garden-container',
+            welcomeModal: 'welcome-modal',
+            seedModal: 'seed-modal',
+            seedModalContent: 'seed-modal-content',
+            seedStepDisplay: 'seed-step-display',
+            seedProgress: 'seed-progress',
+            seedPrevBtn: 'seed-prev-btn',
+            seedNextBtn: 'seed-next-btn',
+            hydrationCountdownPrefix: 'timer-hydrate-',
+            hydrationBarPrefix: 'bar-hydrate-',
+            weatherToast: 'weather-toast',
+            appToast: 'app-toast',
+            weatherCharacterDisplay: 'weather-character-display',
+            photoModal: 'photo-modal',
+            photoGallery: 'photo-gallery',
+            photoPreview: 'photo-preview',
+            photoPreviewTitle: 'photo-preview-title',
+            photoDateLabel: 'photo-date-label',
+            aiTip: 'ai-tip',
+            aiTipBtn: 'ai-tip-btn',
+            photoPanel: 'photo-panel',
+            photoPanelTitle: 'photo-panel-title',
+            photoInput: 'photo-input',
+            prunePanel: 'prune-panel',
+            pruneStepContainer: 'prune-step-container',
+            photoLimitText: 'photo-limit-text',
+            albumGrid: 'album-grid',
+            aiModal: 'ai-modal',
+            aiTipText: 'ai-tip-text',
+            scannerAnimation: 'scanner-animation',
+            expandedPhotoModal: 'expanded-photo-modal',
+            expandedPhotoImg: 'expanded-photo-img',
+            expandedPhotoDate: 'expanded-photo-date',
+            expandedPhotoContent: 'expanded-photo-content'
+        });
+        const SEED_STEPS = Object.freeze([
+            { image: 'img/plantar-1.png', alt: 'Prepara tus herramientas', text: "Paso 1: Prepara tus herramientas como pala y guantes.", audio: "AudioGoesHEre: Sembrar Paso 1" },
+            { image: 'img/plantar-2.png', alt: 'Haz un hoyito en la tierra', text: "Paso 2: Haz un hoyito en la tierra con cuidado. No muy profundo.", audio: "AudioGoesHEre: Sembrar Paso 2" },
+            { image: 'img/plantar-3.png', alt: 'Coloca la semilla', text: "Paso 3: Coloca la semilla o la plantita en el hoyito.", audio: "AudioGoesHEre: Sembrar Paso 3" },
+            { image: 'img/plantar-4.png', alt: 'Tapa y riega', text: "Paso 4: Tapa con tierra y riega un poquito de agua.", audio: "AudioGoesHEre: Sembrar Paso 4" },
+            { image: 'img/plantar-5.png', alt: 'Celebrar', text: "Paso 5: ¡Listo! Tu planta ya tiene una nueva casa.", audio: "AudioGoesHEre: Sembrar Paso 5" },
+        ]);
+        const PRUNE_STEPS = Object.freeze([
+            { emoji: '🌿', text: "Busca las hojas que se vean amarillas o secas. ¡Ya cumplieron su ciclo!" },
+            { emoji: '📏', text: "Corta solo con tijeras de podar (¡pedile ayuda a alguien grande!) y cerca del tallo principal." },
+            { emoji: '💪', text: "Podar ayuda a que tu plantita crezca más fuerte y bonita." }
+        ]);
+
         // --- Módulo Principal de la Aplicación ---
         const App = {
             state: {
@@ -810,19 +862,21 @@
                 activePotId: null, 
                 hydrationIntervals: {}
             },
-            // z-index tracker for stacked modals
+            // 🇨🇷 Llevamos control del z-index para que los modales no se monten raro.
             modalZ: 0,
 
             // --- Persistencia (localStorage) ---
+            // 🇨🇷 Guardamos el estado entero en localStorage para que la experiencia siga igual al volver.
             saveState() {
                 try {
                     localStorage.setItem(APP_ID, JSON.stringify(this.state));
                 } catch (err) {
-                    // No mostrar toasts aquí; solo log para debugging. Evita que el error rompa la ejecución.
-                    console.error('saveState: error saving to localStorage', err);
+                    // No mostramos toasts aquí; solo dejamos el error para depurar sin frenar la app.
+                    console.error('saveState: no pudimos guardar en localStorage', err);
                 }
             },
 
+            // 🇨🇷 Recuperamos el estado guardado y arreglamos tiempos de riego vencidos.
             loadState() {
                 const storedState = localStorage.getItem(APP_ID);
                 if (storedState) {
@@ -841,20 +895,23 @@
             },
             
             // --- Lógica del Pop-up de Bienvenida ---
+            // 🇨🇷 Mostramos el mensaje de bienvenida cada vez que se abre la app.
             showWelcomeModal() {
-                const modal = document.getElementById('welcome-modal');
+                const modal = document.getElementById(DOM_IDS.welcomeModal);
                 if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 this.updateModalCloseVisibility();
             },
 
+            // 🇨🇷 Cerramos la bienvenida y damos una vibración suave para feedback.
             closeWelcomeModal() {
-                const modal = document.getElementById('welcome-modal');
+                const modal = document.getElementById(DOM_IDS.welcomeModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
                 if (navigator.vibrate) navigator.vibrate(50);
                 this.updateModalCloseVisibility();
             },
 
             // --- Inicialización ---
+            // 🇨🇷 Arrancamos la app cargando el estado, clima y modales necesarios.
             init() {
                 this.loadState();
                 this.renderGarden();
@@ -867,58 +924,57 @@
                 // No cargamos fotos de prueba: el usuario debe subir sus propias fotos.
             },
             
-            // Función para cargar fotos de prueba (Base64 placeholder)
+            // Función de prueba para cargar imágenes (se deja vacía a propósito)
             loadMockPhotosIfEmpty() {
                 // Intencionalmente vacío: no cargar imágenes de ejemplo.
             },
 
             // --- Pot image helpers ---
-            // Assign non-repeating random pot images for non-special plants
+            // 🇨🇷 Nos aseguramos de que cada maceta random tenga un diseño distinto, sin repetir hasta que sea necesario.
             ensurePotImages() {
-                const randomImages = ['img/pot-ran1.png', 'img/pot-ran2.png', 'img/pot-ran3.png'];
                 if (!Array.isArray(this.state.plants)) this.state.plants = [];
 
-                // 1) Tally existing usage of random images and preserve existing assignments
+                // 1) Contamos el uso de cada diseño para distribuirlos parejo entre macetas.
                 const usage = {};
-                randomImages.forEach(img => usage[img] = 0);
+                RANDOM_POT_IMAGES.forEach(img => usage[img] = 0);
 
-                // mark used images from existing plants (and only count those that are in the random pool)
+                // 1.5) Revisamos si alguna maceta ya tenía diseño para no cambiárselo.
                 this.state.plants.forEach(p => {
                     if (!p || !p.planted) return;
-                    if (p.potImage && randomImages.includes(p.potImage)) {
+                    if (p.potImage && RANDOM_POT_IMAGES.includes(p.potImage)) {
                         usage[p.potImage] = (usage[p.potImage] || 0) + 1;
                     }
                 });
 
-                // 2) Collect all planted non-special pots that need assignment (no potImage yet)
+                // 2) Buscamos macetas plantadas que todavía no tienen diseño especial asignado.
                 const needsAssignment = this.state.plants.filter(p => {
                     if (!p) return false;
                     if (!p.planted) return false;
                     const isCarrot = (p.emoji === '🥕' || p.type === 'carrot');
                     const isTomato = (p.emoji === '🍅' || p.type === 'tomato');
                     if (isCarrot || isTomato) return false;
-                    return !(p.potImage && randomImages.includes(p.potImage));
+                    return !(p.potImage && RANDOM_POT_IMAGES.includes(p.potImage));
                 });
 
-                // 3) Build a pool of unused images (those with usage === 0)
-                let pool = randomImages.filter(i => usage[i] === 0);
+                // 3) Armamos una lista de imágenes disponibles que no se han usado aún.
+                let pool = RANDOM_POT_IMAGES.filter(i => usage[i] === 0);
 
-                // Shuffle pool for random distribution
+                // Revolvemos la lista para que la asignación se sienta más aleatoria.
                 for (let i = pool.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [pool[i], pool[j]] = [pool[j], pool[i]];
                 }
 
-                // 4) Assign images from the pool first (non-repeating). If pool runs out, pick the least-used image.
+                // 4) Asignamos primero los diseños nuevos y, si se acaban, usamos el menos repetido.
                 needsAssignment.forEach(p => {
                     let chosen = null;
                     if (pool.length > 0) {
                         chosen = pool.shift();
                     } else {
-                        // find the least-used image (min usage)
-                        let minImg = randomImages[0];
+                        // Buscamos cuál diseño ha salido menos para reusarlo.
+                        let minImg = RANDOM_POT_IMAGES[0];
                         let minCount = usage[minImg] || 0;
-                        randomImages.forEach(img => {
+                        RANDOM_POT_IMAGES.forEach(img => {
                             const c = usage[img] || 0;
                             if (c < minCount) { minCount = c; minImg = img; }
                         });
@@ -932,19 +988,20 @@
                 });
             },
 
+            // 🇨🇷 Elegimos la imagen de maceta según el tipo de plantita.
             getPotImageForPlant(plant) {
-                // Empty pot image
+                // Maceta vacía
                 if (!plant || !plant.planted) return 'img/pot-empty.png';
 
-                // Special cases: carrot and tomato
+                // Casos especiales: zanahoria y tomate tienen maceta propia.
                 if (plant.emoji === '🥕' || plant.type === 'carrot') return 'img/pot-carrot.png';
                 if (plant.emoji === '🍅' || plant.type === 'tomato') return 'img/pot-tomato.png';
 
-                // Random assigned image (ensurePotImages should populate p.potImage)
+                // Si ya tiene asignada una maceta random, la respetamos.
                 if (plant.potImage) return plant.potImage;
 
-                    // Fallback
-                    return 'img/pot-ran1.png';
+                // Respaldo en caso de que algo salga raro.
+                return RANDOM_POT_IMAGES[0];
             },
 
             // --- Rendering Principal ---
@@ -953,15 +1010,19 @@
 
             // --- Rendering Principal ---
             renderGarden() {
-                // Ensure images are assigned before rendering (keeps random images non-repeating)
+                // 🇨🇷 Antes de pintar el jardín, repartimos las macetas bonitas sin repetir.
                 this.ensurePotImages();
-                const container = document.getElementById('garden-container');
+                const container = document.getElementById(DOM_IDS.gardenContainer);
+                if (!container) {
+                    console.warn('renderGarden: no encontramos el contenedor del jardín.');
+                    return;
+                }
                 container.innerHTML = this.state.plants.map(plant => this.renderPot(plant)).join('');
             },
 
+            // 🇨🇷 Generamos el HTML de cada maceta con sus controles y estados.
             renderPot(plant) {
                 const potClass = 'glass-card p-6 text-center flex flex-col items-center justify-between h-full';
-                const buttonBaseClass = 'btn-small shadow-md hover:scale-105 active:scale-95 transition-transform duration-200';
 
                 let content;
                 if (!plant.planted) {
@@ -982,11 +1043,6 @@
                     const timeRemaining = Math.max(0, plant.hydrationExpiration - Date.now());
                     const secondsRemaining = Math.ceil(timeRemaining / 1000);
                     const percent = Math.min(100, (secondsRemaining / (HYDRATION_DURATION_MS / 1000)) * 100);
-                    
-                    const hydrateBtnClasses = [
-                            `${buttonBaseClass} btn-circle`,
-                            isDry ? 'pulse' : 'opacity-50' 
-                        ].join(' ');
                     const hydrateTooltip = isDry ? '¡Necesita agua!' : `Aún le quedan ${secondsRemaining}s`;
 
                     content = `
@@ -1003,24 +1059,18 @@
                             <div class="flex space-x-2 mt-4">
                                 
                                 <button id="btn-hydrate-${plant.id}" onclick="App.hydratePlant('${plant.id}')" 
-                                        class="btn-circle ${isDry ? 'pulse' : 'opacity-50'}" 
+                                        class="btn-circle ${isDry ? 'pulse' : 'opacity-50'} text-2xl" 
                                         title="${hydrateTooltip}" 
                                         aria-label="Hidratar">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
-                                        <path d="M12 2s-6 6-6 10a6 6 0 1 0 12 0c0-4-6-10-6-10z" />
-                                    </svg>
+                                    <span aria-hidden="true">💧</span>
                                 </button>
 
-                                <button onclick="App.openPrunePanel('${plant.id}')" class="btn-circle" aria-label="Podar">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
-                                        <path d="M19.7 4.3a1 1 0 0 0-1.4 0L13 9.6 9.4 6 6 9.4l3.6 3.6L4.3 18.3a1 1 0 1 0 1.4 1.4l4.9-4.9 3.6 3.6 4.3-4.3a1 1 0 0 0 0-1.4L19.7 4.3z" />
-                                    </svg>
+                                <button onclick="App.openPrunePanel('${plant.id}')" class="btn-circle text-2xl" aria-label="Podar">
+                                    <span aria-hidden="true">✂️</span>
                                 </button>
 
-                                <button onclick="App.openPhotoPanel('${plant.id}')" class="btn-circle" aria-label="Fotografiar">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
-                                        <path d="M4 7h2l1-1h6l1 1h2v11H4V7zm8 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
-                                    </svg>
+                                <button onclick="App.openPhotoPanel('${plant.id}')" class="btn-circle text-2xl" aria-label="Fotografiar">
+                                    <span aria-hidden="true">📸</span>
                                 </button>
                             </div>
 
@@ -1041,77 +1091,77 @@
             // --- Lógica de la Planta (Hidratar, Sembrar, Podar, Álbum) ---
             
             // 1. Sembrar (Planting)
+            // 🇨🇷 Abrimos el modal de siembra desde cero para la maceta seleccionada.
             openSeedModal(potId) {
                 this.state.activePotId = potId;
                 this.state.seedStep = 1;
-                const modal = document.getElementById('seed-modal');
+                const modal = document.getElementById(DOM_IDS.seedModal);
                 if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 this.renderSeedStep();
                 this.updateModalCloseVisibility();
             },
 
+            // 🇨🇷 Cerramos el modal de siembra y limpiamos el estado activo.
             closeSeedModal() {
-                const modal = document.getElementById('seed-modal');
+                const modal = document.getElementById(DOM_IDS.seedModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
                 this.state.activePotId = null;
                 this.updateModalCloseVisibility();
             },
 
+            // 🇨🇷 Esta función mueve el tutorial de siembra paso a paso y actualiza la vista con la imagen correcta.
             renderSeedStep() {
-                const steps = [
-                    { image: 'img/plantar-1.png', alt: 'Prepara tus herramientas', text: "Paso 1: Prepara tus herramientas como pala y guantes.", audio: "AudioGoesHEre: Sembrar Paso 1" },
-                    { image: 'img/plantar-2.png', alt: 'Haz un hoyito en la tierra', text: "Paso 2: Haz un hoyito en la tierra con cuidado. No muy profundo.", audio: "AudioGoesHEre: Sembrar Paso 2" },
-                    { image: 'img/plantar-3.png', alt: 'Coloca la semilla', text: "Paso 3: Coloca la semilla o la plantita en el hoyito.", audio: "AudioGoesHEre: Sembrar Paso 3" },
-                    { image: 'img/plantar-4.png', alt: 'Tapa y riega', text: "Paso 4: Tapa con tierra y riega un poquito de agua.", audio: "AudioGoesHEre: Sembrar Paso 4" },
-                    { image: 'img/plantar-5.png', alt: 'Celebrar', text: "Paso 5: ¡Listo! Tu planta ya tiene una nueva casa.", audio: "AudioGoesHEre: Sembrar Paso 5" },
-                ];
-                const currentStep = this.state.seedStep - 1;
-                const stepData = steps[currentStep];
+                const currentStepIndex = this.state.seedStep - 1;
+                const stepData = SEED_STEPS[currentStepIndex] || SEED_STEPS[0];
+                const stepContainer = document.getElementById(DOM_IDS.seedStepDisplay);
+                const progressLabel = document.getElementById(DOM_IDS.seedProgress);
+                const prevBtn = document.getElementById(DOM_IDS.seedPrevBtn);
+                const nextBtn = document.getElementById(DOM_IDS.seedNextBtn);
+
+                if (!stepContainer || !progressLabel || !prevBtn || !nextBtn) {
+                    console.warn('renderSeedStep: faltan elementos del modal, revisá el DOM tico.');
+                    return;
+                }
 
                 const stepVisual = stepData.image
                     ? `<img src="${stepData.image}" alt="${stepData.alt}" class="seed-step-image">`
                     : `<div class="text-7xl mb-4 transition-transform duration-300">${stepData.emoji || ''}</div>`;
 
-                document.getElementById('seed-step-display').innerHTML = `
+                stepContainer.innerHTML = `
                     ${stepVisual}
                     <p class="text-xl md:text-2xl font-semibold">${stepData.text}</p>
                 `;
-                document.getElementById('seed-progress').textContent = `Paso ${this.state.seedStep} de 5`;
+                progressLabel.textContent = `Paso ${this.state.seedStep} de ${SEED_STEPS.length}`;
                 
-                document.getElementById('seed-prev-btn').disabled = this.state.seedStep === 1;
-                document.getElementById('seed-next-btn').disabled = false;
+                prevBtn.disabled = this.state.seedStep === 1;
+                nextBtn.disabled = false;
                 
-                if (this.state.seedStep === 5) {
-                    // Final step: show a circular check emoji only
-                    const btn = document.getElementById('seed-next-btn');
-                    if (btn) {
-                        btn.innerHTML = '✅';
-                        btn.classList.remove('btn-circle--accent');
-                        btn.classList.add('btn-circle', 'round');
-                        btn.setAttribute('aria-label', 'Terminar');
-                    }
+                if (this.state.seedStep === SEED_STEPS.length) {
+                    nextBtn.innerHTML = '✅';
+                    nextBtn.classList.remove('btn-circle--accent');
+                    nextBtn.classList.add('btn-circle', 'round');
+                    nextBtn.setAttribute('aria-label', 'Terminar');
                 } else {
-                    const btn = document.getElementById('seed-next-btn');
-                    if (btn) {
-                        btn.innerHTML = '→';
-                        btn.classList.remove('btn-circle--accent');
-                        btn.classList.add('btn-circle', 'round');
-                        btn.setAttribute('aria-label', 'Siguiente');
-                    }
+                    nextBtn.innerHTML = '→';
+                    nextBtn.classList.remove('btn-circle--accent');
+                    nextBtn.classList.add('btn-circle', 'round');
+                    nextBtn.setAttribute('aria-label', 'Siguiente');
                 }
 
                 console.log(`Reproduciendo audio: ${stepData.audio}`);
             },
 
+            // 🇨🇷 Avanzamos al siguiente paso de siembra o terminamos si ya llegamos al final.
             nextSeedStep() {
                 if (this.state.seedStep < 5) {
                     this.state.seedStep++;
                     this.renderSeedStep();
                 } else {
-                    this.completeSeeding(); // Complete the seeding process
+                    this.completeSeeding(); // Procedemos a cerrar la siembra.
                 }
             },
 
+            // 🇨🇷 Permitimos devolvernos un paso si la niña o el niño quiere repasar.
             prevSeedStep() {
                 if (this.state.seedStep > 1) {
                     this.state.seedStep--;
@@ -1119,11 +1169,12 @@
                 }
             },
 
+            // 🇨🇷 Cuando completan la siembra actualizamos la maceta, guardamos y activamos el riego inicial.
             completeSeeding() {
                 const plant = this.state.plants.find(p => p.id === this.state.activePotId);
                 if (plant) {
-                    const availableEmojis = ['🌿', '🌱', '🍀'];
-                    plant.emoji = availableEmojis[Math.floor(Math.random() * availableEmojis.length)];
+                    const randomIndex = Math.floor(Math.random() * RANDOM_PLANT_EMOJIS.length);
+                    plant.emoji = RANDOM_PLANT_EMOJIS[randomIndex];
                     plant.planted = true;
                     this.hydratePlant(plant.id); 
                 }
@@ -1133,28 +1184,30 @@
                 this.setupHydrationTimers();
             },
 
+            // 🇨🇷 Eliminamos la plantita seleccionada y regresamos la maceta a estado vacío.
             deletePlant(potId) {
                 const plant = this.state.plants.find(p => p.id === potId);
                 if (!plant) return;
 
-                // Parar el intervalo de hidratación para esta planta
+                // Paramos el intervalo de hidratación para esta planta
                 if (this.state.hydrationIntervals[potId]) {
                     clearInterval(this.state.hydrationIntervals[potId]);
                     delete this.state.hydrationIntervals[potId];
                 }
 
-                // Reiniciar el estado de la planta
+                // Reiniciamos el estado de la planta
                 plant.planted = false;
                 plant.hydrationExpiration = 0;
                 plant.photos = [];
                 
                 this.saveState();
-                this.renderGarden(); // Re-renderizar para mostrar la maceta vacía
+                this.renderGarden(); // Volvemos a pintar para mostrar la maceta vacía
 
                 if (navigator.vibrate) navigator.vibrate(50);
             },
 
             // 2. Hidratar (Hydrating)
+            // 🇨🇷 Activamos cronómetros para cada maceta plantada y refrescamos su barra de agua.
             setupHydrationTimers() {
                 Object.values(this.state.hydrationIntervals).forEach(clearInterval);
                 this.state.hydrationIntervals = {};
@@ -1170,6 +1223,7 @@
                 });
             },
 
+            // 🇨🇷 Calculamos cuánta agua le queda a la planta y actualizamos UI y estado.
             updateHydrationStatus(potId) {
                 const plant = this.state.plants.find(p => p.id === potId);
                 if (!plant || !plant.planted) return;
@@ -1205,6 +1259,7 @@
                 this.saveState();
             },
 
+            // 🇨🇷 Arrancamos un nuevo ciclo de riego para la maceta indicada y mostramos feedback visual.
             hydratePlant(potId) {
                 const plant = this.state.plants.find(p => p.id === potId);
                 
@@ -1228,13 +1283,14 @@
                 if (navigator.vibrate) navigator.vibrate(50);
 
                 // Mostrar tooltip reutilizable con el mismo estilo que el toast de clima
-                this.showTooltip('Asegurate que la tierra de tu plantita queda muy humeda!', { duration: 3500 });
+                this.showTooltip('¡Recordá dejar la tierrita bien húmeda!', { duration: 3500 });
             },
             
             // 3. Podar (Pruning)
+            // 🇨🇷 Abrimos el panel de poda para que la familia revise los pasos con calma.
             openPrunePanel(potId) {
                 this.state.activePotId = potId;
-                const panel = document.getElementById('prune-panel');
+                const panel = document.getElementById(DOM_IDS.prunePanel);
                 if (panel) { panel.style.display = 'flex'; panel.classList.remove('hidden'); panel.classList.add('flex'); panel.style.zIndex = 1000 + (++this.modalZ); }
                 this.renderPruneSteps();
                 this.updateModalCloseVisibility();
@@ -1243,22 +1299,23 @@
                 if (navigator.vibrate) navigator.vibrate(50);
             },
             
+            // 🇨🇷 Ocultamos el panel de poda y limpiamos la maceta activa.
             closePrunePanel() {
-                const panel = document.getElementById('prune-panel');
+                const panel = document.getElementById(DOM_IDS.prunePanel);
                 if (panel) { panel.style.display = 'none'; panel.classList.remove('flex'); panel.classList.add('hidden'); }
                 this.state.activePotId = null;
                 this.updateModalCloseVisibility();
             },
 
+            // 🇨🇷 Refrescamos los consejitos de poda para que las peques sigan el orden correcto.
             renderPruneSteps() {
-                const steps = [
-                    { emoji: '🌿', text: "Busca las hojas que se vean amarillas o secas. ¡Ya cumplieron su ciclo!" },
-                    { emoji: '📏', text: "Corta solo con tijeras de podar (¡pide ayuda!) y cerca del tallo principal." },
-                    { emoji: '💪', text: "Podar ayuda a que tu plantita crezca más fuerte y bonita." },
-                ];
-                
-                const container = document.getElementById('prune-step-container');
-                container.innerHTML = steps.map(step => `
+                const container = document.getElementById(DOM_IDS.pruneStepContainer);
+                if (!container) {
+                    console.warn('renderPruneSteps: no encontramos el contenedor, revisemos el HTML.');
+                    return;
+                }
+
+                container.innerHTML = PRUNE_STEPS.map(step => `
                     <div class="glass-card p-4 flex items-center space-x-4">
                         <span class="text-4xl">${step.emoji}</span>
                         <p class="text-lg text-left font-medium">${step.text}</p>
@@ -1267,28 +1324,31 @@
             },
 
             // 4. Fotografiar (Photo Album)
+            // 🇨🇷 Abrimos el álbum para cargar fotos nuevas y ver el historial de la plantita.
             openPhotoPanel(potId) {
                 this.state.activePotId = potId;
                 const plant = this.state.plants.find(p => p.id === potId);
                 if (!plant) return;
                 
-                document.getElementById('photo-panel-title').textContent = `📸 Álbum de ${plant.emoji}`;
-                const panel = document.getElementById('photo-panel');
+                document.getElementById(DOM_IDS.photoPanelTitle).textContent = `📸 Álbum de ${plant.emoji}`;
+                const panel = document.getElementById(DOM_IDS.photoPanel);
                 if (panel) { panel.style.display = 'flex'; panel.classList.remove('hidden'); panel.classList.add('flex'); panel.style.zIndex = 1000 + (++this.modalZ); }
                 // Guardamos el potId en el input por si el estado cambia antes de la subida
-                const photoInput = document.getElementById('photo-input');
+                const photoInput = document.getElementById(DOM_IDS.photoInput);
                 if (photoInput) photoInput.dataset.potId = potId;
                 this.renderAlbum(plant);
                 this.updateModalCloseVisibility();
             },
 
+            // 🇨🇷 Ocultamos el álbum y dejamos la maceta sin selección.
             closePhotoPanel() {
-                const panel = document.getElementById('photo-panel');
+                const panel = document.getElementById(DOM_IDS.photoPanel);
                 if (panel) { panel.style.display = 'none'; panel.classList.remove('flex'); panel.classList.add('hidden'); }
                 this.state.activePotId = null;
                 this.updateModalCloseVisibility();
             },
 
+            // 🇨🇷 Procesamos la foto que suben y la guardamos en el álbum correcto.
             handlePhotoUpload(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -1301,8 +1361,9 @@
                 if (!plant) return;
 
                 if (plant.photos.length >= MAX_PHOTOS) {
-                    document.getElementById('photo-limit-text').textContent = `¡Álbum lleno! (${MAX_PHOTOS}/${MAX_PHOTOS})`;
-                    console.error('Álbum lleno (Max 9 fotos).'); 
+                    const limitLabel = document.getElementById(DOM_IDS.photoLimitText);
+                    if (limitLabel) limitLabel.textContent = `¡Álbum lleno! (${MAX_PHOTOS}/${MAX_PHOTOS})`;
+                    console.error('Álbum lleno (máximo alcanzado).'); 
                     event.target.value = ''; 
                     return;
                 }
@@ -1315,10 +1376,10 @@
                         timestamp: new Date().toLocaleString('es-ES') 
                     };
 
-                    // Re-query plant in case state changed
+                    // Volvemos a buscar la planta en caso de que el estado haya cambiado.
                     const p = this.state.plants.find(x => x.id === plantId);
                     if (!p) {
-                        console.error('Plant not found when processing uploaded photo', plantId);
+                        console.error('No encontramos la maceta al guardar la foto', plantId);
                         event.target.value = '';
                         return;
                     }
@@ -1326,30 +1387,37 @@
 
                     p.photos.push(newPhoto);
 
-                    // Guardar y renderizar inmediatamente
+                    // Guardamos y actualizamos la vista de inmediato.
                     this.saveState();
                     console.log('Foto guardada en estado para maceta:', p.id, 'total fotos:', p.photos.length);
                     this.renderAlbum(p);
 
-                    // Clear the file input after processing
+                    // Limpiamos el input para permitir nuevas cargas.
                     event.target.value = '';
                     if (navigator.vibrate) navigator.vibrate(50);
                 };
                 reader.readAsDataURL(file);
             },
 
+            // 🇨🇷 Mostramos la galería de fotos de la maceta seleccionada.
             renderAlbum(plant) {
-                // Si no nos pasan la planta, requery desde el estado activo
+                // Si no nos pasan la planta, la buscamos usando la maceta activa.
                 if (!plant) {
                     const pid = this.state.activePotId;
                     plant = this.state.plants.find(p => p.id === pid) || { photos: [], emoji: '🌿', id: pid };
                 }
 
-                const grid = document.getElementById('album-grid');
-
-                document.getElementById('photo-limit-text').textContent = 
+                const grid = document.getElementById(DOM_IDS.albumGrid);
+                const limitLabel = document.getElementById(DOM_IDS.photoLimitText);
+                if (limitLabel) {
+                    limitLabel.textContent = 
                     `¡Captura el crecimiento de tu planta! (${plant.photos.length}/${MAX_PHOTOS})`;
+                }
 
+                if (!grid) {
+                    console.warn('renderAlbum: no encontramos el grid del álbum.');
+                    return;
+                }
 
                 grid.innerHTML = plant.photos.map(photo => `
                     <div class="relative glass-card aspect-square overflow-hidden shadow-lg">
@@ -1374,6 +1442,7 @@
                 `).join('');
             },
 
+            // 🇨🇷 Quitamos una foto del álbum y refrescamos la vista para que se note de inmediato.
             deletePhoto(photoId) {
                 const plant = this.state.plants.find(p => p.id === this.state.activePotId);
                 if (!plant) return;
@@ -1383,11 +1452,12 @@
                 if (navigator.vibrate) navigator.vibrate(50);
             },
             
-            // Lupa / AI Simulado
+            // Lupa / IA simulada
+            // 🇨🇷 Simulamos un análisis mágico de la foto para dar un consejo divertido.
             openAiModal(photoId) {
-                const modal = document.getElementById('ai-modal');
-                const tipText = document.getElementById('ai-tip-text');
-                const scanner = document.getElementById('scanner-animation');
+                const modal = document.getElementById(DOM_IDS.aiModal);
+                const tipText = document.getElementById(DOM_IDS.aiTipText);
+                const scanner = document.getElementById(DOM_IDS.scannerAnimation);
                 
                 tipText.textContent = "Escaneando...";
                 if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
@@ -1406,24 +1476,26 @@
                 this.updateModalCloseVisibility();
             },
 
+            // 🇨🇷 Cerramos el modal de IA y limpiamos el texto mostrado.
             closeAiModal() {
-                const modal = document.getElementById('ai-modal');
+                const modal = document.getElementById(DOM_IDS.aiModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
-                document.getElementById('ai-tip-text').textContent = "";
+                document.getElementById(DOM_IDS.aiTipText).textContent = "";
                 this.updateModalCloseVisibility();
             },
             
             // 5. Expandir Foto (NUEVO)
+            // 🇨🇷 Abrimos la foto en grande con animación para verla con más detalle.
             expandPhoto(photoId) {
                 const plant = this.state.plants.find(p => p.id === this.state.activePotId);
                 const photo = plant ? plant.photos.find(p => p.id === photoId) : null;
                 
                 if (!photo) return;
                 
-                const modal = document.getElementById('expanded-photo-modal');
-                const img = document.getElementById('expanded-photo-img');
-                const dateDisplay = document.getElementById('expanded-photo-date');
-                const content = document.getElementById('expanded-photo-content');
+                const modal = document.getElementById(DOM_IDS.expandedPhotoModal);
+                const img = document.getElementById(DOM_IDS.expandedPhotoImg);
+                const dateDisplay = document.getElementById(DOM_IDS.expandedPhotoDate);
+                const content = document.getElementById(DOM_IDS.expandedPhotoContent);
 
                 img.src = photo.dataUrl;
                 dateDisplay.textContent = photo.timestamp;
@@ -1439,9 +1511,10 @@
                 this.updateModalCloseVisibility();
             },
             
+            // 🇨🇷 Cerramos la foto ampliada con una animación suave.
             closeExpandedPhotoModal() {
-                const modal = document.getElementById('expanded-photo-modal');
-                const content = document.getElementById('expanded-photo-content');
+                const modal = document.getElementById(DOM_IDS.expandedPhotoModal);
+                const content = document.getElementById(DOM_IDS.expandedPhotoContent);
                 
                 // Iniciar animación de salida
                 content.parentElement.classList.remove('expanded-modal-show');
@@ -1453,143 +1526,148 @@
                 }, 300);
             },
 
-            // Ensure only the top-most modal's close buttons are visible and clickable
+            // 🇨🇷 Solo dejamos visibles los botones de cerrar del modal que está más al frente.
             updateModalCloseVisibility() {
                 const modals = Array.from(document.querySelectorAll('[data-modal="true"]'))
                     .filter(m => m.style.display !== 'none' && !m.classList.contains('hidden'));
 
-                // Sort by zIndex (numeric) and take highest
+                // Ordenamos por z-index para encontrar el modal que está encima.
                 modals.sort((a,b) => (parseInt(a.style.zIndex||0) - parseInt(b.style.zIndex||0)));
                 const top = modals.length ? modals[modals.length-1] : null;
 
-                // Hide all data-close buttons first
+                // Ocultamos todos los botones de cerrar primero.
                 document.querySelectorAll('[data-close="true"]').forEach(btn => {
                     btn.style.display = 'none';
                 });
 
-                // Show close buttons only for top modal
+                // Mostramos el botón de cerrar solo del modal superior.
                 if (top) {
                     Array.from(top.querySelectorAll('[data-close="true"]')).forEach(btn => {
-                        btn.style.display = ''; // revert to CSS inline/default
+                        btn.style.display = ''; // volvemos al estilo por defecto definido en CSS
                     });
                 }
             },
 
             // --- Lógica de Clima ---
-    setWeather(weather, showToast = true) {
-        this.state.currentWeather = weather;
-        this.saveState();
+            // 🇨🇷 Cambiamos el clima global, guardamos estado y encendemos animaciones ticas.
+            setWeather(weather, showToast = true) {
+                this.state.currentWeather = weather;
+                this.saveState();
 
-        const body = document.getElementById('app-body');
-        
-        body.classList.remove('day', 'night', 'rainy');
-        this.removeWeatherCharacters(); 
-        this.removeRainAnimation();
-        this.removeStarAnimation(); 
-        
-        let tip = WEATHER_TIPS[weather];
-        let animationClass = '';
-        let color = '';
-        let imagePath = ''; // Ahora guarda la ruta de la imagen
-        let audioComment = '';
+                const body = document.getElementById('app-body');
+                
+                body.classList.remove('day', 'night', 'rainy');
+                this.removeWeatherCharacters(); 
+                this.removeRainAnimation();
+                this.removeStarAnimation(); 
+                
+                let tip = WEATHER_TIPS[weather];
+                let animationClass = '';
+                let color = '';
+                let imagePath = ''; // Ahora guarda la ruta de la imagen
+                let audioComment = '';
 
-        switch (weather) {
-            case 'day':
-                body.classList.add('day');
-                imagePath = 'img/sunnysun.png'; // ☀️ RUTA DE IMAGEN
-                color = '#FFC300';
-                animationClass = 'anim-sun'; 
-                audioComment = "AudioGoesHEre: Clima Día";
-                break;
-            case 'night':
-                body.classList.add('night');
-                imagePath = 'img/moonymoon.png'; // 🌙 RUTA DE IMAGEN
-                color = '#e9edc9';
-                animationClass = 'anim-moon'; 
-                audioComment = "AudioGoesHEre: Clima Noche";
-                this.startStarAnimation(); 
-                break;
-            case 'rainy':
-                body.classList.add('rainy');
-                imagePath = 'img/cloudycloud.png'; // 🌧️ RUTA DE IMAGEN
-                color = '#6495ED';
-                animationClass = 'anim-cloud';
-                audioComment = "AudioGoesHEre: Clima Lluvioso";
-                this.startRainAnimation();
-                break;
-        }
-        
-        this.addWeatherCharacter(imagePath, animationClass, color); // Usa imagePath
-        
-        if (showToast) {
-            this.showWeatherToast(tip);
-        }
-        
-        console.log(`Reproduciendo audio de clima: ${audioComment}`);
-    },
+                switch (weather) {
+                    case 'day':
+                        body.classList.add('day');
+                        imagePath = 'img/sunnysun.png'; // ☀️ RUTA DE IMAGEN
+                        color = '#FFC300';
+                        animationClass = 'anim-sun'; 
+                        audioComment = "AudioGoesHEre: Clima Día";
+                        break;
+                    case 'night':
+                        body.classList.add('night');
+                        imagePath = 'img/moonymoon.png'; // 🌙 RUTA DE IMAGEN
+                        color = '#e9edc9';
+                        animationClass = 'anim-moon'; 
+                        audioComment = "AudioGoesHEre: Clima Noche";
+                        this.startStarAnimation(); 
+                        break;
+                    case 'rainy':
+                        body.classList.add('rainy');
+                        imagePath = 'img/cloudycloud.png'; // 🌧️ RUTA DE IMAGEN
+                        color = '#6495ED';
+                        animationClass = 'anim-cloud';
+                        audioComment = "AudioGoesHEre: Clima Lluvioso";
+                        this.startRainAnimation();
+                        break;
+                }
+                
+                this.addWeatherCharacter(imagePath, animationClass, color); // Usamos la ruta definida arriba.
+                
+                if (showToast) {
+                    this.showWeatherToast(tip);
+                }
+                
+                console.log(`Reproduciendo audio de clima: ${audioComment}`);
+            },
     
-    // Muestra el tip de clima como un Toast temporal por 10 segundos
-    showWeatherToast(tip) {
-        const toast = document.getElementById('weather-toast');
-        
-        toast.classList.remove('show');
-        
-        setTimeout(() => {
-            toast.textContent = tip;
-            toast.classList.add('show');
+            // 🇨🇷 Mostramos el tip de clima como toast durante unos segundos.
+            showWeatherToast(tip) {
+                const toast = document.getElementById(DOM_IDS.weatherToast);
+                if (!toast) return;
+                
+                toast.classList.remove('show');
+                
+                setTimeout(() => {
+                    toast.textContent = tip;
+                    toast.classList.add('show');
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, TOAST_DURATION_MS); 
+                }, 100); 
+            },
+
+            // 🇨🇷 Reutilizamos el mismo toast para otros mensajitos dentro de la app.
+            showTooltip(text, options = {}) {
+                const duration = options.duration || 3000;
+                const toast = document.getElementById(DOM_IDS.weatherToast);
+                if (!toast) return;
+
+                // Aseguramos que el toast vuelva a su estado oculto
+                toast.classList.remove('show');
+
+                setTimeout(() => {
+                    toast.textContent = text;
+                    toast.classList.add('show');
+
+                    // Limpiamos cualquier timeout previo
+                    clearTimeout(this._appToastTimeout);
+                    this._appToastTimeout = setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, duration);
+                }, 100);
+            },
+
+            // 🇨🇷 Colocamos el personaje del clima grande en pantalla según el clima escogido.
+            addWeatherCharacter(imagePath, animationClass = '', color) {
+                const charDisplay = document.getElementById(DOM_IDS.weatherCharacterDisplay);
+                
+                // Aseguramos que el ícono se añada al final del contenedor.
+                const iconDiv = document.createElement('div');
+                iconDiv.className = `weather-icon-lg w-[45vmin] h-[45vmin] ${animationClass}`;
+                // Nota: Se elimina el color CSS porque es una imagen, no texto/emoji
+                // Si queremos volver a pintarla con color, podemos descomentar la línea siguiente.
+                // iconDiv.style.cssText = `color: ${color};`; 
+                
+                // Nota tica: mejor mostramos la imagen con <img> para respetar los gráficos originales.
+                iconDiv.innerHTML = `<img src="${imagePath}" alt="Ícono de Clima" class="w-full h-full object-contain" />`;
+                
+                charDisplay.appendChild(iconDiv);
+            },
+
+            removeWeatherCharacters() {
+                const display = document.getElementById(DOM_IDS.weatherCharacterDisplay);
+                if (display) display.innerHTML = '';
+            },
             
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, TOAST_DURATION_MS); 
-        }, 100); 
-    },
-
-    // Toast reutilizable para la app — reutiliza el #weather-toast (mismo estilo/animación)
-    showTooltip(text, options = {}) {
-        const duration = options.duration || 3000;
-        const toast = document.getElementById('weather-toast');
-        if (!toast) return;
-
-        // Aseguramos que el toast vuelva a su estado oculto
-        toast.classList.remove('show');
-
-        setTimeout(() => {
-            toast.textContent = text;
-            toast.classList.add('show');
-
-            // Limpiar cualquier timeout previo
-            clearTimeout(this._appToastTimeout);
-            this._appToastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, duration);
-        }, 100);
-    },
-
-    addWeatherCharacter(imagePath, animationClass = '', color) {
-        const charDisplay = document.getElementById('weather-character-display');
-        
-        // Asegura que el ícono se añada al final
-        const iconDiv = document.createElement('div');
-        iconDiv.className = `weather-icon-lg w-[45vmin] h-[45vmin] ${animationClass}`;
-        // Nota: Se elimina el color CSS porque es una imagen, no texto/emoji
-        // iconDiv.style.cssText = `color: ${color};`; 
-        
-        // **CAMBIO CLAVE: Usamos la etiqueta <img> para mostrar la imagen**
-        iconDiv.innerHTML = `<img src="${imagePath}" alt="Ícono de Clima" class="w-full h-full object-contain" />`;
-        
-        charDisplay.appendChild(iconDiv);
-    },
-
-    removeWeatherCharacters() {
-        document.getElementById('weather-character-display').innerHTML = '';
-    },
-    
-    // Función para el efecto estrellado 
-    startStarAnimation() {
-        this.removeStarAnimation(); 
-        const charDisplay = document.getElementById('weather-character-display');
-        
-        const starFieldContainer = document.createElement('div');
+            // Función para el efecto estrellado 
+            startStarAnimation() {
+                this.removeStarAnimation(); 
+                const charDisplay = document.getElementById(DOM_IDS.weatherCharacterDisplay);
+                
+                const starFieldContainer = document.createElement('div');
         starFieldContainer.id = 'star-field';
         starFieldContainer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;'; 
         charDisplay.appendChild(starFieldContainer);
@@ -1625,7 +1703,7 @@
         }
     },
     
-    // Animación de lluvia sutil
+    // 🇨🇷 Activamos una lluvia leve para el clima lluvioso.
     startRainAnimation() {
         this.removeRainAnimation(); 
         const rainContainer = document.createElement('div');
@@ -1644,107 +1722,74 @@
         }
     },
 
-    removeRainAnimation() {
-        const rainContainer = document.getElementById('rain-container');
-        if (rainContainer) {
-            rainContainer.remove();
-        }
-    }
+            removeRainAnimation() {
+                const rainContainer = document.getElementById('rain-container');
+                if (rainContainer) {
+                    rainContainer.remove();
+                }
+            },
 
-    ,
-    // Dev helper: generate two test plants (carrot and tomato).
-    // This is safe for development and won't run automatically.
-    generateDevPlants() {
-        const now = Date.now();
+            // 🇨🇷 Herramienta de desarrollo para preparar macetas de prueba con zanahoria y tomate.
+            generateDevPlants() {
+                const now = Date.now();
 
-        // Use the app's pot ids for slots 0 and 1 so behavior is consistent
-        const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
-        const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+                // Usamos los ids oficiales para asegurar consistencia al probar.
+                const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+                const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
 
-        // Ensure plants array exists
-        const existing = Array.isArray(this.state.plants) ? this.state.plants : [];
+                // Confirmamos que el arreglo de plantas exista.
+                const existing = Array.isArray(this.state.plants) ? this.state.plants : [];
 
-        // Keep existing third slot if present, otherwise create a default empty pot
-        const third = (existing[2] && typeof existing[2] === 'object') ? existing[2] : { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
+                // Si ya hay una tercera maceta, la respetamos; si no, creamos una vacía.
+                const third = (existing[2] && typeof existing[2] === 'object') ? existing[2] : { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
 
-        // Replace slots 0 and 1 and ensure length is exactly 3
-        this.state.plants = [carrot, tomato, third];
+                // Reemplazamos las dos primeras macetas y nos aseguramos de tener solo tres.
+                this.state.plants = [carrot, tomato, third];
 
-        this.saveState();
-        this.renderGarden();
-        this.setupHydrationTimers();
-        console.log('Dev plants placed in slots 0 and 1; total pots limited to 3.');
-    },
+                this.saveState();
+                this.renderGarden();
+                this.setupHydrationTimers();
+                console.log('Macetas de prueba listas (zanahoria y tomate).');
+            },
 
-    // Dev helper: fully reset state and create only carrot and tomato test plants
-    resetToDevPlants() {
-        if (!confirm('⚠️ This will delete ALL pots and photos. Are you sure?')) return;
-        
-        const now = Date.now();
-        
-        // Create fresh carrot and tomato pots
-        const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
-        const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
-        const third = { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
-        
-        // Clear all state and create fresh plants array
-        this.state = {
-            plants: [carrot, tomato, third],
-            currentWeather: this.state.currentWeather || 'day',
-            hydrationIntervals: {},
-            activePotId: null,
-            seedStep: 1,
-            modalZ: 0
+            // 🇨🇷 Herramienta de desarrollo para reiniciar todo y dejar solo las macetas de prueba.
+            resetToDevPlants() {
+                if (!confirm('⚠️ Esto borrará TODAS las macetas y fotos. ¿Continuamos?')) return;
+                
+                const now = Date.now();
+                
+                // Creamos de nuevo las macetas de zanahoria y tomate.
+                const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+                const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+                const third = { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
+                
+                // Reiniciamos todo el estado para volver al punto de partida.
+                this.state = {
+                    plants: [carrot, tomato, third],
+                    currentWeather: this.state.currentWeather || 'day',
+                    hydrationIntervals: {},
+                    activePotId: null,
+                    seedStep: 1,
+                    modalZ: 0
+                };
+                
+                // Desactivamos cualquier temporizador viejo.
+                Object.values(this.state.hydrationIntervals).forEach(clearInterval);
+                
+                this.saveState();
+                this.renderGarden();
+                this.setupHydrationTimers();
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                console.log('Reiniciamos el estado con macetas de prueba fresquitas.');
+            }
         };
-        
-        // Clear all hydration timers
-        Object.values(this.state.hydrationIntervals).forEach(clearInterval);
-        
-        this.saveState();
-        this.renderGarden();
-        this.setupHydrationTimers();
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        console.log('State reset completed: fresh carrot and tomato pots created.');
-    },
-
-    // Dev helper: fully reset state and create only carrot and tomato test plants
-    resetToDevPlants() {
-        if (!confirm('⚠️ This will delete ALL pots and photos. Are you sure?')) return;
-        
-        const now = Date.now();
-        
-        // Create fresh carrot and tomato pots
-        const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
-        const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
-        const third = { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
-        
-        // Clear all state and create fresh plants array
-        this.state = {
-            plants: [carrot, tomato, third],
-            currentWeather: this.state.currentWeather || 'day',
-            hydrationIntervals: {},
-            activePotId: null,
-            seedStep: 1,
-            modalZ: 0
-        };
-        
-        // Clear all hydration timers
-        Object.values(this.state.hydrationIntervals).forEach(clearInterval);
-        
-        this.saveState();
-        this.renderGarden();
-        this.setupHydrationTimers();
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        console.log('State reset completed: fresh carrot and tomato pots created.');
-    }
-}
 
         // Inicializar la aplicación al cargar la ventana
         window.onload = () => {
             App.init();
         };
 
-        // Reveal dev buttons only when ?dev is present in the URL
+        // Mostramos los botones de desarrollo solo si la URL trae ?dev
         (function revealDevButtons() {
             try {
                 const params = new URLSearchParams(window.location.search);
@@ -1753,7 +1798,7 @@
                     if (container) container.removeAttribute('hidden');
                 }
             } catch (e) {
-                console.warn('revealDevButtons: could not parse URL params', e);
+                console.warn('revealDevButtons: no pudimos leer los parámetros de la URL', e);
             }
         })();
 
@@ -1786,7 +1831,7 @@
                 }
             }
 
-            // Debounced scroll/resize handler
+            // Manejador suave para scroll y resize usando requestAnimationFrame
             let rafId = null;
             function scheduleUpdate() {
                 if (rafId) cancelAnimationFrame(rafId);
@@ -1796,7 +1841,7 @@
             window.addEventListener('scroll', scheduleUpdate, { passive: true });
             window.addEventListener('resize', scheduleUpdate);
 
-            // Initial state
+            // Estado inicial del footer
             updateFooterState();
         }
 
