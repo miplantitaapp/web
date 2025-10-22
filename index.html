@@ -845,42 +845,58 @@
             // Assign non-repeating random pot images for non-special plants
             ensurePotImages() {
                 const randomImages = ['img/pot-ran1.png', 'img/pot-ran2.png', 'img/pot-ran3.png'];
-                // track already used random images
-                const used = new Set();
                 if (!Array.isArray(this.state.plants)) this.state.plants = [];
-                // collect used random images from existing assignments
+
+                // 1) Tally existing usage of random images and preserve existing assignments
+                const usage = {};
+                randomImages.forEach(img => usage[img] = 0);
+
+                // mark used images from existing plants (and only count those that are in the random pool)
                 this.state.plants.forEach(p => {
-                    if (p && p.potImage && randomImages.includes(p.potImage)) used.add(p.potImage);
+                    if (!p || !p.planted) return;
+                    if (p.potImage && randomImages.includes(p.potImage)) {
+                        usage[p.potImage] = (usage[p.potImage] || 0) + 1;
+                    }
                 });
 
-                // available pool
-                let available = randomImages.filter(i => !used.has(i));
-
-                // assign for plants that are planted and not carrot/tomato
-                this.state.plants.forEach(p => {
-                    if (!p) return;
-                    if (!p.planted) return;
+                // 2) Collect all planted non-special pots that need assignment (no potImage yet)
+                const needsAssignment = this.state.plants.filter(p => {
+                    if (!p) return false;
+                    if (!p.planted) return false;
                     const isCarrot = (p.emoji === '🥕' || p.type === 'carrot');
                     const isTomato = (p.emoji === '🍅' || p.type === 'tomato');
-                    if (isCarrot || isTomato) return; // they use special images
+                    if (isCarrot || isTomato) return false;
+                    return !(p.potImage && randomImages.includes(p.potImage));
+                });
 
-                    // If already has a random image, preserve it
-                    if (p.potImage && randomImages.includes(p.potImage)) {
-                        // make sure it's marked as used
-                        used.add(p.potImage);
-                        // ensure available list removes it
-                        available = available.filter(i => i !== p.potImage);
-                        return;
+                // 3) Build a pool of unused images (those with usage === 0)
+                let pool = randomImages.filter(i => usage[i] === 0);
+
+                // Shuffle pool for random distribution
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
+                }
+
+                // 4) Assign images from the pool first (non-repeating). If pool runs out, pick the least-used image.
+                needsAssignment.forEach(p => {
+                    let chosen = null;
+                    if (pool.length > 0) {
+                        chosen = pool.shift();
+                    } else {
+                        // find the least-used image (min usage)
+                        let minImg = randomImages[0];
+                        let minCount = usage[minImg] || 0;
+                        randomImages.forEach(img => {
+                            const c = usage[img] || 0;
+                            if (c < minCount) { minCount = c; minImg = img; }
+                        });
+                        chosen = minImg;
                     }
 
-                    // Assign a new available random image (non-repeating)
-                    const next = available.shift();
-                    if (next) {
-                        p.potImage = next;
-                        used.add(next);
-                    } else {
-                        // fallback: pick any random image (rare, only if more plants than images)
-                        p.potImage = randomImages[Math.floor(Math.random() * randomImages.length)];
+                    if (chosen) {
+                        p.potImage = chosen;
+                        usage[chosen] = (usage[chosen] || 0) + 1;
                     }
                 });
             },
