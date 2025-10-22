@@ -381,10 +381,25 @@
         .glass-panel.modal-responsive { transition: transform 280ms cubic-bezier(.22,.9,.31,1), opacity 280ms ease; transform: translateY(8px); opacity: 0; }
         /* When the modal container is shown (it receives the 'flex' class), reveal the inner panel */
         .fixed.flex .glass-panel.modal-responsive { transform: translateY(0); opacity: 1; }
+        /* Dev-only helper: fixed top-right button for development/testing.
+           Hide by adding the attribute `hidden` or the class `hidden` / `dev-hidden` on the element. */
+        .dev-only {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 9999;
+            opacity: 0.95;
+            backdrop-filter: blur(6px);
+        }
+        .dev-only[hidden], .dev-only.dev-hidden, .dev-only.hidden { display: none !important; visibility: hidden !important; }
         
     </style>
 </head>
 <body id="app-body" class="flex flex-col min-h-screen">
+
+        <!-- Dev-only: generate two test plants (carrot & tomato).
+            Hidden by default; reveal by adding ?dev to the page URL (e.g. /index.html?dev) -->
+        <button id="dev-generate-btn" class="dev-only btn-circle btn-circle--accent" title="Generar plantas de prueba" aria-label="Generar plantas de prueba" onclick="App.generateDevPlants()" hidden>⚗️</button>
 
     <!-- Capa de Caracteres de Clima y Animaciones de Fondo (Estrellas/Lluvia) -->
     <div id="weather-character-display">
@@ -826,9 +841,73 @@
                 // Intencionalmente vacío: no cargar imágenes de ejemplo.
             },
 
+            // --- Pot image helpers ---
+            // Assign non-repeating random pot images for non-special plants
+            ensurePotImages() {
+                const randomImages = ['img/pot-ran1.png', 'img/pot-ran2.png', 'img/pot-ran3.png'];
+                // track already used random images
+                const used = new Set();
+                if (!Array.isArray(this.state.plants)) this.state.plants = [];
+                // collect used random images from existing assignments
+                this.state.plants.forEach(p => {
+                    if (p && p.potImage && randomImages.includes(p.potImage)) used.add(p.potImage);
+                });
+
+                // available pool
+                let available = randomImages.filter(i => !used.has(i));
+
+                // assign for plants that are planted and not carrot/tomato
+                this.state.plants.forEach(p => {
+                    if (!p) return;
+                    if (!p.planted) return;
+                    const isCarrot = (p.emoji === '🥕' || p.type === 'carrot');
+                    const isTomato = (p.emoji === '🍅' || p.type === 'tomato');
+                    if (isCarrot || isTomato) return; // they use special images
+
+                    // If already has a random image, preserve it
+                    if (p.potImage && randomImages.includes(p.potImage)) {
+                        // make sure it's marked as used
+                        used.add(p.potImage);
+                        // ensure available list removes it
+                        available = available.filter(i => i !== p.potImage);
+                        return;
+                    }
+
+                    // Assign a new available random image (non-repeating)
+                    const next = available.shift();
+                    if (next) {
+                        p.potImage = next;
+                        used.add(next);
+                    } else {
+                        // fallback: pick any random image (rare, only if more plants than images)
+                        p.potImage = randomImages[Math.floor(Math.random() * randomImages.length)];
+                    }
+                });
+            },
+
+            getPotImageForPlant(plant) {
+                // Empty pot image
+                if (!plant || !plant.planted) return 'img/pot-empty.png';
+
+                // Special cases: carrot and tomato
+                if (plant.emoji === '🥕' || plant.type === 'carrot') return 'img/pot-carrot.png';
+                if (plant.emoji === '🍅' || plant.type === 'tomato') return 'img/pot-tomato.png';
+
+                // Random assigned image (ensurePotImages should populate p.potImage)
+                if (plant.potImage) return plant.potImage;
+
+                    // Fallback
+                    return 'img/pot-ran1.png';
+            },
+
+            // --- Rendering Principal ---
+
+
 
             // --- Rendering Principal ---
             renderGarden() {
+                // Ensure images are assigned before rendering (keeps random images non-repeating)
+                this.ensurePotImages();
                 const container = document.getElementById('garden-container');
                 container.innerHTML = this.state.plants.map(plant => this.renderPot(plant)).join('');
             },
@@ -869,10 +948,9 @@
                             <!-- Botón de Eliminar Planta -->
                             <button onclick="App.deletePlant('${plant.id}')" class="btn-circle btn-circle--danger absolute top-2 right-2 z-10" title="Eliminar Planta" aria-label="Eliminar planta">×</button>
 
-                            <div id="plant-visual-${plant.id}" class="text-[6rem] transition-transform duration-500 hover:scale-105">
-                                
-                                <span>${plant.emoji}</span>
-                            </div>
+                                    <div id="plant-visual-${plant.id}" class="h-[6rem] w-[6rem] transition-transform duration-500 hover:scale-105">
+                                        <img src="${this.getPotImageForPlant(plant)}" alt="${plant.planted ? (plant.emoji === '🥕' ? 'Maceta Zanahoria' : (plant.emoji === '🍅' ? 'Maceta Tomate' : 'Maceta')) : 'Maceta Vacía'}" class="h-full w-full object-contain mx-auto" onerror="this.onerror=null;this.src='img/pot-empty.png'" />
+                                    </div>
                             
                             <!-- Botones de Acción de Planta -->
                             <div class="flex space-x-2 mt-4">
@@ -899,7 +977,6 @@
                         </div>
                     `;
                 }
-
                 return `<div id="${plant.id}" class="${potClass}">${content}</div>`;
             },
             
@@ -1511,12 +1588,50 @@
             rainContainer.remove();
         }
     }
+
+    ,
+    // Dev helper: generate two test plants (carrot and tomato).
+    // This is safe for development and won't run automatically.
+    generateDevPlants() {
+        const now = Date.now();
+
+        // Use the app's pot ids for slots 0 and 1 so behavior is consistent
+        const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+        const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+
+        // Ensure plants array exists
+        const existing = Array.isArray(this.state.plants) ? this.state.plants : [];
+
+        // Keep existing third slot if present, otherwise create a default empty pot
+        const third = (existing[2] && typeof existing[2] === 'object') ? existing[2] : { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
+
+        // Replace slots 0 and 1 and ensure length is exactly 3
+        this.state.plants = [carrot, tomato, third];
+
+        this.saveState();
+        this.renderGarden();
+        this.setupHydrationTimers();
+        console.log('Dev plants placed in slots 0 and 1; total pots limited to 3.');
+    }
 }
 
         // Inicializar la aplicación al cargar la ventana
         window.onload = () => {
             App.init();
         };
+
+        // Reveal dev button only when ?dev is present in the URL
+        (function revealDevButton() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('dev')) {
+                    const btn = document.getElementById('dev-generate-btn');
+                    if (btn) btn.removeAttribute('hidden');
+                }
+            } catch (e) {
+                console.warn('revealDevButton: could not parse URL params', e);
+            }
+        })();
 
         /**
          * Footer behavior: switch between full and condensed states based on scroll position.
