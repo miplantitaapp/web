@@ -104,6 +104,27 @@
             transform: scale(1.1);
         }
 
+        /* Suave flotación para el dron de clima */
+        @keyframes droneFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
+        }
+        .weather-drone {
+            position: absolute;
+            top: -4rem;
+            left: -6rem;
+            width: min(32vmin, 32rem);
+            pointer-events: none;
+            animation: droneFloat 4.5s ease-in-out infinite;
+        }
+
+        .seed-step-image {
+            width: clamp(7rem, 22vmin, 14rem);
+            height: auto;
+            margin: 0 auto 1rem;
+            display: block;
+        }
+
         /* Animación de Pulso (para Hidratar cuando es tiempo) */
         @keyframes pulse-highlight {
             0% { box-shadow: 0 0 0 0 rgba(181, 244, 247, 0.7); } 
@@ -397,9 +418,11 @@
 </head>
 <body id="app-body" class="flex flex-col min-h-screen">
 
-        <!-- Dev-only: generate two test plants (carrot & tomato).
-            Hidden by default; reveal by adding ?dev to the page URL (e.g. /index.html?dev) -->
-        <button id="dev-generate-btn" class="dev-only btn-circle btn-circle--accent" title="Generar plantas de prueba" aria-label="Generar plantas de prueba" onclick="App.generateDevPlants()" hidden>⚗️</button>
+        <!-- Dev Buttons (Hidden by default, shown with ?dev param) -->
+        <div class="dev-only fixed top-4 right-4 flex gap-2" hidden>
+            <button id="dev-generate-btn" class="btn-circle btn-circle--accent" title="Generar plantas de prueba" aria-label="Generar plantas de prueba" onclick="App.generateDevPlants()">⚗️</button>
+            <button id="dev-reset-btn" class="btn-circle btn-circle--danger" title="Reiniciar todo" aria-label="Reiniciar todo" onclick="App.resetToDevPlants()">🔄</button>
+        </div>
 
     <!-- Capa de Caracteres de Clima y Animaciones de Fondo (Estrellas/Lluvia) -->
     <div id="weather-character-display">
@@ -427,6 +450,10 @@
         
         <!-- Controles de Clima -->
         <div id="weather-controls" class="glass-panel p-4 mb-8 max-w-2xl mx-auto flex flex-col items-center relative z-20">
+            <img 
+                src="img/dronPersonaje.png" 
+                alt="Dron guía del clima" 
+                class="weather-drone">
             <h2 class="text-xl md:text-2xl font-bold mb-4">¿Cómo está el clima?</h2>
             <div class="flex flex-wrap justify-center gap-4">
                 
@@ -536,7 +563,7 @@
     <div id="prune-panel" data-modal="true" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50">
         <div class="glass-panel modal-responsive p-6 w-full max-w-md">
                 <div class="flex justify-between items-start">
-                <h2 class="text-3xl font-bold mb-4">✂️ ¡Aprendiendo a Podar!</h2>
+                <h2 class="text-3xl font-bold mb-4">¡Aprendiendo a Podar!</h2>
                 <button onclick="App.closePrunePanel()" data-close="true" class="text-2xl btn-circle" aria-label="Cerrar">❌</button>
             </div>
             <div id="prune-step-container" class="space-y-4 text-center">
@@ -555,7 +582,7 @@
     <div id="photo-panel" data-modal="true" class="fixed inset-0 bg-black bg-opacity-40 hidden justify-center items-center p-4 z-50 overflow-y-auto">
         <div class="glass-panel modal-responsive p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-start mb-6">
-                    <h2 id="photo-panel-title" class="text-3xl font-bold">📸 Álbum de Plantita</h2>
+                    <h2 id="photo-panel-title" class="text-3xl font-bold">Álbum de Plantita</h2>
                     <!-- Header close removed: footer 'Cerrar' button is primary close control -->
                 </div>
             
@@ -563,7 +590,11 @@
             <div class="flex flex-col md:flex-row items-center justify-between glass-card p-4 mb-6">
                 <p id="photo-limit-text" class="text-xl font-semibold mb-4 md:mb-0">¡Captura el crecimiento de tu planta! (0/9)</p>
                 <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="App.handlePhotoUpload(event)">
-                <button onclick="document.getElementById('photo-input').click()" class="btn-circle" title="Subir foto" aria-label="Subir foto">📸</button>
+                <button onclick="document.getElementById('photo-input').click()" class="btn-circle" title="Subir foto" aria-label="Subir foto">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+                        <path d="M4 7a2 2 0 0 1 2-2h2l1-1h4l1 1h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm8 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
+                    </svg>
+                </button>
             </div>
                 <div class="modal-footer">
                 <button onclick="App.closePhotoPanel()" data-close="true" aria-label="Cerrar" class="btn-circle">❌</button>
@@ -938,7 +969,7 @@
                     content = `
                         <div class="flex-grow flex flex-col justify-center items-center">
                             
-                            <span class="text-6xl mb-4">🕳️</span>
+                            <img src="img/pot-empty.png" alt="Maceta vacía" class="h-24 w-24 object-contain mx-auto mb-4" onerror="this.onerror=null;this.src='img/pot-empty.png'" />
                             <p class="text-xl font-semibold mb-6">Maceta vacía, ¿Quieres sembrar?</p>
                             <button onclick="App.openSeedModal('${plant.id}')" class="btn-circle inline" aria-label="Sembrar">
                                         🪏
@@ -975,11 +1006,22 @@
                                         class="btn-circle ${isDry ? 'pulse' : 'opacity-50'}" 
                                         title="${hydrateTooltip}" 
                                         aria-label="Hidratar">
-                                    💧
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+                                        <path d="M12 2s-6 6-6 10a6 6 0 1 0 12 0c0-4-6-10-6-10z" />
+                                    </svg>
                                 </button>
-                                
-                                <button onclick="App.openPrunePanel('${plant.id}')" class="btn-circle" aria-label="Podar">✂️</button>
-                                <button onclick="App.openPhotoPanel('${plant.id}')" class="btn-circle" aria-label="Fotografiar">📸</button>
+
+                                <button onclick="App.openPrunePanel('${plant.id}')" class="btn-circle" aria-label="Podar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+                                        <path d="M19.7 4.3a1 1 0 0 0-1.4 0L13 9.6 9.4 6 6 9.4l3.6 3.6L4.3 18.3a1 1 0 1 0 1.4 1.4l4.9-4.9 3.6 3.6 4.3-4.3a1 1 0 0 0 0-1.4L19.7 4.3z" />
+                                    </svg>
+                                </button>
+
+                                <button onclick="App.openPhotoPanel('${plant.id}')" class="btn-circle" aria-label="Fotografiar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
+                                        <path d="M4 7h2l1-1h6l1 1h2v11H4V7zm8 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
+                                    </svg>
+                                </button>
                             </div>
 
                             <!-- Barra de Hidratación -->
@@ -1017,17 +1059,21 @@
 
             renderSeedStep() {
                 const steps = [
-                    { emoji: '🧤', text: "Paso 1: Prepara tus herramientas como pala y guantes.", audio: "AudioGoesHEre: Sembrar Paso 1" },
-                    { emoji: '🤏', text: "Paso 2: Haz un hoyito en la tierra con cuidado. No muy profundo.", audio: "AudioGoesHEre: Sembrar Paso 2" },
-                    { emoji: '🌰', text: "Paso 3: Coloca la semilla o la plantita en el hoyito.", audio: "AudioGoesHEre: Sembrar Paso 3" },
-                    { emoji: '💦', text: "Paso 4: Tapa con tierra y riega un poquito de agua.", audio: "AudioGoesHEre: Sembrar Paso 4" },
-                    { emoji: '🎉', text: "Paso 5: ¡Listo! Tu planta ya tiene una nueva casa.", audio: "AudioGoesHEre: Sembrar Paso 5" },
+                    { image: 'img/plantar-1.png', alt: 'Prepara tus herramientas', text: "Paso 1: Prepara tus herramientas como pala y guantes.", audio: "AudioGoesHEre: Sembrar Paso 1" },
+                    { image: 'img/plantar-2.png', alt: 'Haz un hoyito en la tierra', text: "Paso 2: Haz un hoyito en la tierra con cuidado. No muy profundo.", audio: "AudioGoesHEre: Sembrar Paso 2" },
+                    { image: 'img/plantar-3.png', alt: 'Coloca la semilla', text: "Paso 3: Coloca la semilla o la plantita en el hoyito.", audio: "AudioGoesHEre: Sembrar Paso 3" },
+                    { image: 'img/plantar-4.png', alt: 'Tapa y riega', text: "Paso 4: Tapa con tierra y riega un poquito de agua.", audio: "AudioGoesHEre: Sembrar Paso 4" },
+                    { image: 'img/plantar-5.png', alt: 'Celebrar', text: "Paso 5: ¡Listo! Tu planta ya tiene una nueva casa.", audio: "AudioGoesHEre: Sembrar Paso 5" },
                 ];
                 const currentStep = this.state.seedStep - 1;
                 const stepData = steps[currentStep];
 
+                const stepVisual = stepData.image
+                    ? `<img src="${stepData.image}" alt="${stepData.alt}" class="seed-step-image">`
+                    : `<div class="text-7xl mb-4 transition-transform duration-300">${stepData.emoji || ''}</div>`;
+
                 document.getElementById('seed-step-display').innerHTML = `
-                    <div class="text-7xl mb-4 transition-transform duration-300">${stepData.emoji}</div>
+                    ${stepVisual}
                     <p class="text-xl md:text-2xl font-semibold">${stepData.text}</p>
                 `;
                 document.getElementById('seed-progress').textContent = `Paso ${this.state.seedStep} de 5`;
@@ -1628,6 +1674,68 @@
         this.renderGarden();
         this.setupHydrationTimers();
         console.log('Dev plants placed in slots 0 and 1; total pots limited to 3.');
+    },
+
+    // Dev helper: fully reset state and create only carrot and tomato test plants
+    resetToDevPlants() {
+        if (!confirm('⚠️ This will delete ALL pots and photos. Are you sure?')) return;
+        
+        const now = Date.now();
+        
+        // Create fresh carrot and tomato pots
+        const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+        const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+        const third = { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
+        
+        // Clear all state and create fresh plants array
+        this.state = {
+            plants: [carrot, tomato, third],
+            currentWeather: this.state.currentWeather || 'day',
+            hydrationIntervals: {},
+            activePotId: null,
+            seedStep: 1,
+            modalZ: 0
+        };
+        
+        // Clear all hydration timers
+        Object.values(this.state.hydrationIntervals).forEach(clearInterval);
+        
+        this.saveState();
+        this.renderGarden();
+        this.setupHydrationTimers();
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        console.log('State reset completed: fresh carrot and tomato pots created.');
+    },
+
+    // Dev helper: fully reset state and create only carrot and tomato test plants
+    resetToDevPlants() {
+        if (!confirm('⚠️ This will delete ALL pots and photos. Are you sure?')) return;
+        
+        const now = Date.now();
+        
+        // Create fresh carrot and tomato pots
+        const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+        const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+        const third = { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
+        
+        // Clear all state and create fresh plants array
+        this.state = {
+            plants: [carrot, tomato, third],
+            currentWeather: this.state.currentWeather || 'day',
+            hydrationIntervals: {},
+            activePotId: null,
+            seedStep: 1,
+            modalZ: 0
+        };
+        
+        // Clear all hydration timers
+        Object.values(this.state.hydrationIntervals).forEach(clearInterval);
+        
+        this.saveState();
+        this.renderGarden();
+        this.setupHydrationTimers();
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        console.log('State reset completed: fresh carrot and tomato pots created.');
     }
 }
 
@@ -1636,16 +1744,16 @@
             App.init();
         };
 
-        // Reveal dev button only when ?dev is present in the URL
-        (function revealDevButton() {
+        // Reveal dev buttons only when ?dev is present in the URL
+        (function revealDevButtons() {
             try {
                 const params = new URLSearchParams(window.location.search);
                 if (params.has('dev')) {
-                    const btn = document.getElementById('dev-generate-btn');
-                    if (btn) btn.removeAttribute('hidden');
+                    const container = document.querySelector('.dev-only');
+                    if (container) container.removeAttribute('hidden');
                 }
             } catch (e) {
-                console.warn('revealDevButton: could not parse URL params', e);
+                console.warn('revealDevButtons: could not parse URL params', e);
             }
         })();
 
@@ -1701,9 +1809,6 @@
             }
         })();
 
-        // Normalize any buttons that contain "Entendido" text to the btn-circle style
-
     </script>
 </body>
 </html>
-
