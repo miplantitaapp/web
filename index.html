@@ -590,10 +590,8 @@
             <div class="flex flex-col md:flex-row items-center justify-between glass-card p-4 mb-6">
                 <p id="photo-limit-text" class="text-xl font-semibold mb-4 md:mb-0">¡Captura el crecimiento de tu planta! (0/9)</p>
                 <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="App.handlePhotoUpload(event)">
-                <button onclick="document.getElementById('photo-input').click()" class="btn-circle" title="Subir foto" aria-label="Subir foto">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true">
-                        <path d="M4 7a2 2 0 0 1 2-2h2l1-1h4l1 1h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7zm8 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
-                    </svg>
+                <button onclick="document.getElementById('photo-input').click()" class="btn-circle text-2xl" title="Subir foto" aria-label="Subir foto">
+                    <span aria-hidden="true">📸</span>
                 </button>
             </div>
                 <div class="modal-footer">
@@ -844,8 +842,8 @@
             { image: 'img/plantar-5.png', alt: 'Celebrar', text: "Paso 5: ¡Listo! Tu planta ya tiene una nueva casa.", audio: "AudioGoesHEre: Sembrar Paso 5" },
         ]);
         const PRUNE_STEPS = Object.freeze([
-            { emoji: '🌿', text: "Busca las hojas que se vean amarillas o secas. ¡Ya cumplieron su ciclo!" },
-            { emoji: '📏', text: "Corta solo con tijeras de podar (¡pedile ayuda a alguien grande!) y cerca del tallo principal." },
+            { emoji: '🍂', text: "Busca las hojas que se vean amarillas o secas. ¡Ya cumplieron su ciclo!" },
+            { emoji: '✂️', text: "Corta solo con tijeras de podar (¡pedile ayuda a alguien grande!) y cerca del tallo principal." },
             { emoji: '💪', text: "Podar ayuda a que tu plantita crezca más fuerte y bonita." }
         ]);
 
