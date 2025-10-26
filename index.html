@@ -660,7 +660,9 @@
                     id="footer-expotec-logo"
                     src="img/logoEXPOTEC.png" 
                     alt="Logo de Expotec" 
-                    class="w-20 object-contain mx-auto mb-1">
+                    class="w-20 object-contain mx-auto mb-1"
+                    onclick="App.softReset()"
+                    title="Soft reset (Expotec)">
         </div>
     </footer>
 
@@ -780,12 +782,13 @@
         const TOAST_DURATION_MS = 10000; // 10 segundos
         
         // Configuración de audios y textos para la función "Lupa/AI"
+        // Se añade audioSrc para mapear al archivo existente en /audio
         const AI_TIPS = [
-            { text: "¡Estás haciendo un trabajo increíble! Tu planta se ve muy feliz.", audioComment: "AudioGoesHEre: AI Tip 1" },
-            { text: "Recuerda revisar la tierra. ¿Está seca o un poco húmeda?", audioComment: "AudioGoesHEre: AI Tip 2" },
-            { text: "¡Mira esas hojitas nuevas! El sol la está ayudando mucho.", audioComment: "AudioGoesHEre: AI Tip 3" },
-            { text: "Si ves un bichito, no lo asustes. ¡Son parte de la naturaleza!", audioComment: "AudioGoesHEre: AI Tip 4" },
-            { text: "Necesita un poco de aire fresco. ¡Abre la ventana un ratito!", audioComment: "AudioGoesHEre: AI Tip 5" },
+            { text: "¡Estás haciendo un trabajo increíble! Tu planta se ve muy feliz.", audioComment: "AudioGoesHEre: AI Tip 1", audioSrc: "audio/aud-tip1.ogg" },
+            { text: "Recuerda revisar la tierra. ¿Está seca o un poco húmeda?", audioComment: "AudioGoesHEre: AI Tip 2", audioSrc: "audio/aud-tip2.ogg" },
+            { text: "¡Mira esas hojitas nuevas! El sol la está ayudando mucho.", audioComment: "AudioGoesHEre: AI Tip 3", audioSrc: "audio/aud-tip3.ogg" },
+            { text: "Si ves un bichito, es hora de retirar plagas. ¡Llama a un adulto!", audioComment: "AudioGoesHEre: AI Tip 4", audioSrc: "audio/aud-tip4.ogg" },
+            { text: "Tu plantita necesita un poco de aire fresco. ¡Abre la ventana un ratito!", audioComment: "AudioGoesHEre: AI Tip 5", audioSrc: "audio/aud-tip5.ogg" },
         ];
         
         // Definición de Tips de Clima
@@ -862,6 +865,90 @@
             },
             // 🇨🇷 Llevamos control del z-index para que los modales no se monten raro.
             modalZ: 0,
+            // Reproductor de audio reutilizable
+            _audioEl: null,
+            // Token simple para abortar acciones tardías del modal de IA
+            _aiModalToken: 0,
+            // Token para secuencias de audio
+            _audioSeqToken: 0,
+
+            // Asegura una sola instancia de Audio para toda la app
+            _ensureAudioEl() {
+                if (!this._audioEl) {
+                    try {
+                        this._audioEl = new Audio();
+                        this._audioEl.preload = 'auto';
+                    } catch (e) {
+                        console.warn('No fue posible inicializar el reproductor de audio', e);
+                        this._audioEl = null;
+                    }
+                }
+                return this._audioEl;
+            },
+
+            // Reproduce un audio, deteniendo cualquier reproducción anterior
+            playAudio(src, options = {}) {
+                try {
+                    // Cancelar cualquier secuencia en curso
+                    this._audioSeqToken = 0;
+                    const el = this._ensureAudioEl();
+                    if (!el || !src) return;
+                    try { el.pause(); el.currentTime = 0; } catch (_) {}
+                    el.loop = !!options.loop;
+                    el.src = src;
+                    // Intentar reproducir; en algunos navegadores requiere interacción previa
+                    const p = el.play();
+                    if (p && typeof p.catch === 'function') {
+                        p.catch(err => console.warn('No se pudo reproducir el audio:', src, err));
+                    }
+                } catch (err) {
+                    console.warn('Error al reproducir audio', err);
+                }
+            },
+
+            // Detiene cualquier audio en curso
+            stopAudio() {
+                const el = this._audioEl;
+                if (!el) return;
+                try { el.pause(); el.currentTime = 0; } catch (_) {}
+                // Cancelar secuencias
+                this._audioSeqToken = 0;
+            },
+
+            // Reproduce una secuencia de audios en orden
+            playAudioSequence(sources = []) {
+                if (!Array.isArray(sources) || sources.length === 0) return;
+                const el = this._ensureAudioEl();
+                if (!el) return;
+                const token = Date.now();
+                this._audioSeqToken = token;
+
+                const playIndex = (i) => {
+                    if (this._audioSeqToken !== token) return; // secuencia cancelada
+                    const src = sources[i];
+                    if (!src) return;
+                    // Configuramos onended para encadenar
+                    el.onended = () => {
+                        if (this._audioSeqToken !== token) return;
+                        if (i + 1 < sources.length) {
+                            playIndex(i + 1);
+                        } else {
+                            // Fin de la secuencia
+                            this._audioSeqToken = 0;
+                        }
+                    };
+                    // Usamos playAudio internamente pero sin romper nuestro token
+                    try { el.pause(); el.currentTime = 0; } catch (_) {}
+                    el.loop = false;
+                    el.src = src;
+                    const p = el.play();
+                    if (p && typeof p.catch === 'function') {
+                        p.catch(err => console.warn('No se pudo reproducir parte de la secuencia:', src, err));
+                    }
+                };
+
+                playIndex(0);
+            },
 
             // --- Persistencia (localStorage) ---
             // 🇨🇷 Guardamos el estado entero en localStorage para que la experiencia siga igual al volver.
@@ -905,6 +992,8 @@
                 const modal = document.getElementById(DOM_IDS.welcomeModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
                 if (navigator.vibrate) navigator.vibrate(50);
+                // Sonido de bienvenida al cerrar el mensaje importante
+                this.playAudio('audio/aud-welcome.ogg');
                 this.updateModalCloseVisibility();
             },
 
@@ -1097,6 +1186,10 @@
                 if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 this.renderSeedStep();
                 this.updateModalCloseVisibility();
+                // Al abrir el menú de siembra, reproducimos bienvenida + paso 1 en secuencia
+                // Evitar que el render inicial corte la bienvenida del paso 1
+                this._seedSkipStepAudioOnce = true;
+                this.playAudioSequence(['audio/aud-sow-welcome.ogg', 'audio/aud-sow-1.ogg']);
             },
 
             // 🇨🇷 Cerramos el modal de siembra y limpiamos el estado activo.
@@ -1147,6 +1240,17 @@
                 }
 
                 console.log(`Reproduciendo audio: ${stepData.audio}`);
+                // Audio por paso de siembra (1..5)
+                const stepNum = this.state.seedStep;
+                if (stepNum >= 1 && stepNum <= 5) {
+                    const src = `audio/aud-sow-${stepNum}.ogg`;
+                    if (stepNum === 1 && this._seedSkipStepAudioOnce) {
+                        // Saltamos 1 sola vez para no cortar la bienvenida secuenciada
+                        this._seedSkipStepAudioOnce = false;
+                    } else {
+                        this.playAudio(src);
+                    }
+                }
             },
 
             // 🇨🇷 Avanzamos al siguiente paso de siembra o terminamos si ya llegamos al final.
@@ -1180,6 +1284,46 @@
                 this.saveState();
                 this.renderGarden();
                 this.setupHydrationTimers();
+            },
+
+            // 🇨🇷 Soft reset desde el logo de Expotec: limpia riegos, borra la 3ra maceta y muestra bienvenida.
+            softReset() {
+                try {
+                    // Cerrar cualquier modal abierto
+                    this.closeAllModals();
+                    // Detener timers de riego y limpiar contadores
+                    if (this.state && this.state.hydrationIntervals) {
+                        Object.values(this.state.hydrationIntervals).forEach(id => { try { clearInterval(id); } catch (_) {} });
+                    }
+                    this.state.hydrationIntervals = {};
+
+                    // Reset de riego para todas las macetas
+                    this.state.plants.forEach(p => { if (p) p.hydrationExpiration = 0; });
+
+                    // Borrar planta en la tercera maceta
+                    const third = this.state.plants.find(p => p && p.id === 'maceta-3');
+                    if (third) {
+                        third.planted = false;
+                        third.emoji = '🍀';
+                        third.photos = [];
+                        third.hydrationExpiration = 0;
+                        delete third.type;
+                        delete third.potImage;
+                    }
+
+                    this.saveState();
+                    this.renderGarden();
+                    this.setupHydrationTimers();
+
+                    // Volver al tope de la página
+                    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); }
+
+                    // Mostrar bienvenida (Importante)
+                    this.showWelcomeModal();
+                    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+                } catch (e) {
+                    console.warn('softReset: error al reiniciar suave', e);
+                }
             },
 
             // 🇨🇷 Eliminamos la plantita seleccionada y regresamos la maceta a estado vacío.
@@ -1278,6 +1422,8 @@
                 }
 
                 console.log("Reproduciendo audio de agua.");
+                // Reproducir sonido de riego
+                this.playAudio('audio/aud-watering.ogg');
                 if (navigator.vibrate) navigator.vibrate(50);
 
                 // Mostrar tooltip reutilizable con el mismo estilo que el toast de clima
@@ -1294,6 +1440,8 @@
                 this.updateModalCloseVisibility();
                 
                 console.log("Reproduciendo audio de consejos de poda.");
+                // Sonido al abrir el panel de poda
+                this.playAudio('audio/aud-prun.ogg');
                 if (navigator.vibrate) navigator.vibrate(50);
             },
             
@@ -1336,6 +1484,8 @@
                 if (photoInput) photoInput.dataset.potId = potId;
                 this.renderAlbum(plant);
                 this.updateModalCloseVisibility();
+                // Sonido al abrir el álbum
+                this.playAudio('audio/aud-album.ogg');
             },
 
             // 🇨🇷 Ocultamos el álbum y dejamos la maceta sin selección.
@@ -1432,7 +1582,7 @@
                         <div class="absolute top-2 right-2 flex space-x-2">
                             
                             <!-- Botón Analizar/Lupa -->
-                                <button onclick="event.stopPropagation(); App.openAiModal('${photo.id}')" class="btn-circle" aria-label="Analizar foto con IA">🔍</button>
+                                <button onclick="event.stopPropagation(); App.openAiModal('${photo.id}')" class="btn-circle" aria-label="Analizar foto con IA">🤖</button>
                                 <!-- Botón Eliminar -->
                                 <button onclick="event.stopPropagation(); App.deletePhoto('${photo.id}')" class="btn-circle btn-circle--danger" aria-label="Eliminar foto">🗑️</button>
                         </div>
@@ -1460,16 +1610,38 @@
                 tipText.textContent = "Escaneando...";
                 if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 scanner.classList.remove('hidden');
+                // Por si hubiera un audio previo sonando
+                this.stopAudio();
+                // Asegurar que el elemento de audio se cree en este gesto de usuario
+                this._ensureAudioEl();
                 
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 
+                // Marcar una sesión de apertura para evitar reproducir audio si ya se cerró
+                const openToken = Date.now();
+                this._aiModalToken = openToken;
+
                 setTimeout(() => {
+                    // Si el modal ya se cerró o se abrió otro, no continuamos
+                    if (this._aiModalToken !== openToken) return;
                     scanner.classList.add('hidden');
                     
                     const randomTip = AI_TIPS[Math.floor(Math.random() * AI_TIPS.length)];
                     tipText.textContent = randomTip.text;
-                    
-                    console.log(`Reproduciendo audio de consejo AI: ${randomTip.audioComment}`);
+                    // Reproducimos el audio correspondiente al tip mostrado
+                    if (randomTip && randomTip.audioSrc) {
+                        console.log(`Reproduciendo audio de consejo AI: ${randomTip.audioComment} -> ${randomTip.audioSrc}`);
+                        this.playAudio(randomTip.audioSrc);
+                    } else {
+                        // Fallback: intentar deducir el número de tip a partir del comentario
+                        const match = (randomTip && randomTip.audioComment || '').match(/(\d+)/);
+                        const num = match ? match[1] : '';
+                        const guessed = num ? `audio/aud-tip${num}.ogg` : '';
+                        if (guessed) {
+                            console.log(`Reproduciendo audio deducido: ${guessed}`);
+                            this.playAudio(guessed);
+                        }
+                    }
                 }, 2000);
                 this.updateModalCloseVisibility();
             },
@@ -1479,6 +1651,10 @@
                 const modal = document.getElementById(DOM_IDS.aiModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
                 document.getElementById(DOM_IDS.aiTipText).textContent = "";
+                // Invalidar futuros callbacks del análisis actual y detener audio
+                this._aiModalToken = 0;
+                // Detener audio del tip si está sonando
+                this.stopAudio();
                 this.updateModalCloseVisibility();
             },
             
@@ -1524,6 +1700,33 @@
                 }, 300);
             },
 
+            // 🇨🇷 Cerrar todos los modales abiertos para evitar overlays duplicados.
+            closeAllModals() {
+                const ids = [
+                    DOM_IDS.welcomeModal,
+                    DOM_IDS.seedModal,
+                    DOM_IDS.prunePanel,
+                    DOM_IDS.photoPanel,
+                    DOM_IDS.aiModal,
+                    DOM_IDS.expandedPhotoModal
+                ];
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    try {
+                        el.style.display = 'none';
+                        el.classList.remove('flex');
+                        el.classList.add('hidden');
+                    } catch(_) {}
+                });
+                // Limpiar contenido de IA y cancelar callbacks/sonido
+                const tip = document.getElementById(DOM_IDS.aiTipText);
+                if (tip) tip.textContent = '';
+                this._aiModalToken = 0;
+                this.stopAudio();
+                this.updateModalCloseVisibility();
+            },
+
             // 🇨🇷 Solo dejamos visibles los botones de cerrar del modal que está más al frente.
             updateModalCloseVisibility() {
                 const modals = Array.from(document.querySelectorAll('[data-modal="true"]'))
@@ -1564,6 +1767,7 @@
                 let color = '';
                 let imagePath = ''; // Ahora guarda la ruta de la imagen
                 let audioComment = '';
+                let audioSrc = '';
 
                 switch (weather) {
                     case 'day':
@@ -1572,6 +1776,7 @@
                         color = '#FFC300';
                         animationClass = 'anim-sun'; 
                         audioComment = "AudioGoesHEre: Clima Día";
+                        audioSrc = 'audio/aud-sun.ogg';
                         break;
                     case 'night':
                         body.classList.add('night');
@@ -1579,6 +1784,7 @@
                         color = '#e9edc9';
                         animationClass = 'anim-moon'; 
                         audioComment = "AudioGoesHEre: Clima Noche";
+                        audioSrc = 'audio/aud-night.ogg';
                         this.startStarAnimation(); 
                         break;
                     case 'rainy':
@@ -1587,6 +1793,7 @@
                         color = '#6495ED';
                         animationClass = 'anim-cloud';
                         audioComment = "AudioGoesHEre: Clima Lluvioso";
+                        audioSrc = 'audio/aud-rain.ogg';
                         this.startRainAnimation();
                         break;
                 }
@@ -1595,6 +1802,8 @@
                 
                 if (showToast) {
                     this.showWeatherToast(tip);
+                    // Reproducir sonido de clima solo en acciones de usuario (no en init)
+                    if (audioSrc) this.playAudio(audioSrc);
                 }
                 
                 console.log(`Reproduciendo audio de clima: ${audioComment}`);
