@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<!--  
+🌱 ¿Conoces el **Vibe Coding**?  
+¡Hola! 👋 Gracias por interesarte tanto en el proyecto de los chicos, que hasta viniste a curiosear el código que le da vida 😉  
+
+Estos pequeños genios crearon esta app desde cero con una técnica nueva llamada **Vibe Coding**: usaron bloques de secuencias en cartulina, dibujos y fotos que luego se integraron en un prompt de **ChatGPT 5** para construir todo lo que ves — desde el selector del clima hasta el módulo de análisis con IA 🤖✨  
+
+No usamos APIs externas para proteger el prototipo y mantenerlo 100 % seguro 👶🛡️. Está diseñado especialmente para niños de 5 a 6 años, cuidando su privacidad al máximo.  
+
+¿Tienes dudas, ideas o comentarios? Escríbenos a miplantitaapp@gmail.com 💌  
+
+Y sí, el código está lleno de pura vibra — ¡sin revisar, con mucho por mejorar y aprender!   
+-->
+
 <html lang="es">
 <head>
     <link rel="icon" href="img/logoApp.png" type="png">
@@ -778,7 +791,12 @@
         const DB_NAME = 'miPlantitaAI_state'; 
         const APP_ID = 'mi-plantita-ai-v1'; 
         const MAX_PHOTOS = 9;
-        const HYDRATION_DURATION_MS = 60000; // 60 segundos
+        // Hidratación: rango aleatorio por ciclo entre 12h y 48h
+        const HYDRATION_MIN_HOURS = 12;
+        const HYDRATION_MAX_HOURS = 48;
+        const HYDRATION_MIN_MS = HYDRATION_MIN_HOURS * 60 * 60 * 1000;
+        const HYDRATION_MAX_MS = HYDRATION_MAX_HOURS * 60 * 60 * 1000;
+        const HYDRATION_BACKCOMPAT_MS = 60000; // 60s (para estados previos sin duración almacenada)
         const TOAST_DURATION_MS = 10000; // 10 segundos
         
         // Configuración de audios y textos para la función "Lupa/AI"
@@ -798,7 +816,26 @@
             'rainy': "🌧️ ¡Día de lluvia! La naturaleza riega sola. Cuida que no se inunden."
         };
 
-        // 🥥 Configuración base centralizada para evitar repeticiones y mantener orden tico.
+        // Lista consolidada de audios a precargar para uso sin conexión durante la sesión
+        const AUDIO_FILES = Object.freeze([
+            // Consejos de IA
+            ...AI_TIPS.map(t => t.audioSrc).filter(Boolean),
+            // Siembra (bienvenida + pasos)
+            'audio/aud-sow-welcome.ogg',
+            ...Array.from({ length: 5 }, (_, i) => `audio/aud-sow-${i + 1}.ogg`),
+            // Bienvenida general
+            'audio/aud-welcome.ogg',
+            // Funciones de la app
+            'audio/aud-prun.ogg',
+            'audio/aud-album.ogg',
+            'audio/aud-watering.ogg',
+            // Clima
+            'audio/aud-sun.ogg',
+            'audio/aud-night.ogg',
+            'audio/aud-rain.ogg',
+        ]);
+
+        // Configuración base centralizada para evitar repetición y mantener consistencia.
         const RANDOM_POT_IMAGES = Object.freeze(['img/pot-ran1.png', 'img/pot-ran2.png', 'img/pot-ran3.png']);
         const RANDOM_PLANT_EMOJIS = Object.freeze(['🌿', '🌱', '🍀']);
         const DOM_IDS = Object.freeze({
@@ -863,7 +900,7 @@
                 activePotId: null, 
                 hydrationIntervals: {}
             },
-            // 🇨🇷 Llevamos control del z-index para que los modales no se monten raro.
+            // Control centralizado de z-index para apilar modales correctamente.
             modalZ: 0,
             // Reproductor de audio reutilizable
             _audioEl: null,
@@ -871,6 +908,34 @@
             _aiModalToken: 0,
             // Token para secuencias de audio
             _audioSeqToken: 0,
+            // Mapa de audios precargados: src original -> objectURL
+            _audioCache: new Map(),
+            // Genera duración aleatoria de hidratación (ms) dentro del rango [12h, 48h]
+            _randomHydrationDurationMs() {
+                const r = Math.random();
+                return Math.floor(HYDRATION_MIN_MS + r * (HYDRATION_MAX_MS - HYDRATION_MIN_MS));
+            },
+            // Formatea el tiempo restante de hidratación en dias/horas/minutos
+            _formatHydrationRemaining(ms) {
+                try {
+                    if (ms <= 0 || !isFinite(ms)) return '¡Tu planta tiene sed!';
+                    const oneMin = 60 * 1000;
+                    const oneHour = 60 * oneMin;
+                    const oneDay = 24 * oneHour;
+                    if (ms < oneHour) {
+                        const mins = Math.max(1, Math.ceil(ms / oneMin));
+                        return `faltan ${mins} minutos para hidratar`;
+                    }
+                    if (ms < oneDay) {
+                        const hours = Math.max(1, Math.ceil(ms / oneHour));
+                        return `faltan ${hours} h para hidratar`;
+                    }
+                    const days = Math.max(1, Math.ceil(ms / oneDay));
+                    return `faltan ${days} dias para hidratar`;
+                } catch (_) {
+                    return '¡Tu planta tiene sed!';
+                }
+            },
 
             // Asegura una sola instancia de Audio para toda la app
             _ensureAudioEl() {
@@ -895,7 +960,7 @@
                     if (!el || !src) return;
                     try { el.pause(); el.currentTime = 0; } catch (_) {}
                     el.loop = !!options.loop;
-                    el.src = src;
+                    el.src = this._getAudioSrc(src);
                     // Intentar reproducir; en algunos navegadores requiere interacción previa
                     const p = el.play();
                     if (p && typeof p.catch === 'function') {
@@ -940,7 +1005,7 @@
                     // Usamos playAudio internamente pero sin romper nuestro token
                     try { el.pause(); el.currentTime = 0; } catch (_) {}
                     el.loop = false;
-                    el.src = src;
+                    el.src = this._getAudioSrc(src);
                     const p = el.play();
                     if (p && typeof p.catch === 'function') {
                         p.catch(err => console.warn('No se pudo reproducir parte de la secuencia:', src, err));
@@ -950,8 +1015,51 @@
                 playIndex(0);
             },
 
+            // Retorna el src de reproducción: usa el objectURL si fue precargado
+            _getAudioSrc(src) {
+                try {
+                    if (this._audioCache && this._audioCache.has(src)) {
+                        return this._audioCache.get(src);
+                    }
+                } catch (_) {}
+                return src;
+            },
+
+            // Precarga audios en memoria (Blob -> objectURL) para disponibilidad offline durante la sesión
+            async preloadAudios() {
+                try {
+                    const unique = Array.from(new Set(AUDIO_FILES.filter(Boolean)));
+                    const tasks = unique.map(async (url) => {
+                        try {
+                            const res = await fetch(url, { cache: 'force-cache' });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            const blob = await res.blob();
+                            const objectUrl = URL.createObjectURL(blob);
+                            this._audioCache.set(url, objectUrl);
+                        } catch (e) {
+                            console.warn('preloadAudios: no se pudo precargar', url, e);
+                        }
+                    });
+                    await Promise.all(tasks);
+                    console.log('Audios precargados:', this._audioCache.size);
+                } catch (err) {
+                    console.warn('preloadAudios: error general de precarga', err);
+                }
+            },
+
+            // Libera los objectURL generados
+            _revokeAudioCache() {
+                try {
+                    if (!this._audioCache) return;
+                    for (const url of this._audioCache.values()) {
+                        try { URL.revokeObjectURL(url); } catch (_) {}
+                    }
+                    this._audioCache.clear();
+                } catch (_) {}
+            },
+
             // --- Persistencia (localStorage) ---
-            // 🇨🇷 Guardamos el estado entero en localStorage para que la experiencia siga igual al volver.
+            // Persiste el estado completo en localStorage para mantener la sesión local.
             saveState() {
                 try {
                     localStorage.setItem(APP_ID, JSON.stringify(this.state));
@@ -961,7 +1069,7 @@
                 }
             },
 
-            // 🇨🇷 Recuperamos el estado guardado y arreglamos tiempos de riego vencidos.
+            // Carga el estado y normaliza temporizadores de hidratación expirados.
             loadState() {
                 const storedState = localStorage.getItem(APP_ID);
                 if (storedState) {
@@ -973,6 +1081,10 @@
                             const remaining = p.hydrationExpiration - Date.now();
                             if (remaining <= 0) {
                                 p.hydrationExpiration = 0; 
+                                p.hydrationCycleMs = 0;
+                            } else if (!p.hydrationCycleMs || p.hydrationCycleMs <= 0) {
+                                // Compatibilidad hacia atrás: si hay un ciclo activo sin duración guardada
+                                p.hydrationCycleMs = HYDRATION_BACKCOMPAT_MS;
                             }
                         }
                     });
@@ -980,14 +1092,14 @@
             },
             
             // --- Lógica del Pop-up de Bienvenida ---
-            // 🇨🇷 Mostramos el mensaje de bienvenida cada vez que se abre la app.
+            // Muestra el modal de bienvenida al iniciar.
             showWelcomeModal() {
                 const modal = document.getElementById(DOM_IDS.welcomeModal);
                 if (modal) { modal.style.display = 'flex'; modal.classList.remove('hidden'); modal.classList.add('flex'); modal.style.zIndex = 1000 + (++this.modalZ); }
                 this.updateModalCloseVisibility();
             },
 
-            // 🇨🇷 Cerramos la bienvenida y damos una vibración suave para feedback.
+            // Cierra el modal de bienvenida y aplica vibración de confirmación.
             closeWelcomeModal() {
                 const modal = document.getElementById(DOM_IDS.welcomeModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
@@ -998,13 +1110,17 @@
             },
 
             // --- Inicialización ---
-            // 🇨🇷 Arrancamos la app cargando el estado, clima y modales necesarios.
+            // Inicializa la aplicación: estado, clima y temporizadores.
             init() {
                 this.loadState();
                 this.renderGarden();
                 // Usamos el estado cargado, pero forzamos el renderizado del clima
                 this.setWeather(this.state.currentWeather, false); // false para no mostrar el toast al iniciar
                 this.setupHydrationTimers();
+                // Precarga de audios para disponibilidad durante la sesión
+                this.preloadAudios();
+                // Limpieza de recursos al salir
+                try { window.addEventListener('beforeunload', () => App._revokeAudioCache()); } catch (_) {}
                 
                 this.showWelcomeModal();
                 
@@ -1017,7 +1133,7 @@
             },
 
             // --- Pot image helpers ---
-            // 🇨🇷 Nos aseguramos de que cada maceta random tenga un diseño distinto, sin repetir hasta que sea necesario.
+            // Asigna imágenes de macetas de forma balanceada para minimizar repeticiones.
             ensurePotImages() {
                 if (!Array.isArray(this.state.plants)) this.state.plants = [];
 
@@ -1075,7 +1191,7 @@
                 });
             },
 
-            // 🇨🇷 Elegimos la imagen de maceta según el tipo de plantita.
+            // Selecciona la imagen de maceta según el tipo de planta.
             getPotImageForPlant(plant) {
                 // Maceta vacía
                 if (!plant || !plant.planted) return 'img/pot-empty.png';
@@ -1097,7 +1213,7 @@
 
             // --- Rendering Principal ---
             renderGarden() {
-                // 🇨🇷 Antes de pintar el jardín, repartimos las macetas bonitas sin repetir.
+                // Antes de renderizar el jardín, asegura la asignación de macetas.
                 this.ensurePotImages();
                 const container = document.getElementById(DOM_IDS.gardenContainer);
                 if (!container) {
@@ -1107,7 +1223,7 @@
                 container.innerHTML = this.state.plants.map(plant => this.renderPot(plant)).join('');
             },
 
-            // 🇨🇷 Generamos el HTML de cada maceta con sus controles y estados.
+            // Renderiza cada maceta con sus controles y estado.
             renderPot(plant) {
                 const potClass = 'glass-card p-6 text-center flex flex-col items-center justify-between h-full';
 
@@ -1128,9 +1244,10 @@
                     // Estado: Plantado
                     const isDry = plant.hydrationExpiration <= Date.now();
                     const timeRemaining = Math.max(0, plant.hydrationExpiration - Date.now());
-                    const secondsRemaining = Math.ceil(timeRemaining / 1000);
-                    const percent = Math.min(100, (secondsRemaining / (HYDRATION_DURATION_MS / 1000)) * 100);
-                    const hydrateTooltip = isDry ? '¡Necesita agua!' : `Aún le quedan ${secondsRemaining}s`;
+                    const cycleMs = plant.hydrationCycleMs || HYDRATION_BACKCOMPAT_MS;
+                    const percent = Math.min(100, cycleMs > 0 ? (timeRemaining / cycleMs) * 100 : 0);
+                    const labelRemaining = isDry ? '¡Tu planta tiene sed!' : this._formatHydrationRemaining(timeRemaining);
+                    const hydrateTooltip = isDry ? '¡Necesita agua!' : labelRemaining;
 
                     content = `
                         <div class="flex-grow flex flex-col justify-between items-center w-full relative">
@@ -1168,7 +1285,7 @@
                                   style="width: ${percent}%;">
                               </div>
                            </div>
-                            <p id="timer-hydrate-${plant.id}" class="text-sm mt-1 font-mono">${secondsRemaining}s restantes</p>
+                            <p id="timer-hydrate-${plant.id}" class="text-sm mt-1 font-mono">${labelRemaining}</p>
                         </div>
                     `;
                 }
@@ -1178,7 +1295,7 @@
             // --- Lógica de la Planta (Hidratar, Sembrar, Podar, Álbum) ---
             
             // 1. Sembrar (Planting)
-            // 🇨🇷 Abrimos el modal de siembra desde cero para la maceta seleccionada.
+            // Abre el modal de siembra para la maceta seleccionada.
             openSeedModal(potId) {
                 this.state.activePotId = potId;
                 this.state.seedStep = 1;
@@ -1192,7 +1309,7 @@
                 this.playAudioSequence(['audio/aud-sow-welcome.ogg', 'audio/aud-sow-1.ogg']);
             },
 
-            // 🇨🇷 Cerramos el modal de siembra y limpiamos el estado activo.
+            // Cierra el modal de siembra y limpia el estado activo.
             closeSeedModal() {
                 const modal = document.getElementById(DOM_IDS.seedModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
@@ -1200,7 +1317,7 @@
                 this.updateModalCloseVisibility();
             },
 
-            // 🇨🇷 Esta función mueve el tutorial de siembra paso a paso y actualiza la vista con la imagen correcta.
+            // Actualiza la UI del tutorial de siembra según el paso actual.
             renderSeedStep() {
                 const currentStepIndex = this.state.seedStep - 1;
                 const stepData = SEED_STEPS[currentStepIndex] || SEED_STEPS[0];
@@ -1210,7 +1327,7 @@
                 const nextBtn = document.getElementById(DOM_IDS.seedNextBtn);
 
                 if (!stepContainer || !progressLabel || !prevBtn || !nextBtn) {
-                    console.warn('renderSeedStep: faltan elementos del modal, revisá el DOM tico.');
+                    console.warn('renderSeedStep: faltan elementos del modal, revisar el DOM.');
                     return;
                 }
 
@@ -1253,7 +1370,7 @@
                 }
             },
 
-            // 🇨🇷 Avanzamos al siguiente paso de siembra o terminamos si ya llegamos al final.
+            // Avanza al siguiente paso de siembra o finaliza en el último paso.
             nextSeedStep() {
                 if (this.state.seedStep < 5) {
                     this.state.seedStep++;
@@ -1263,7 +1380,7 @@
                 }
             },
 
-            // 🇨🇷 Permitimos devolvernos un paso si la niña o el niño quiere repasar.
+            // Permite retroceder un paso en el tutorial de siembra.
             prevSeedStep() {
                 if (this.state.seedStep > 1) {
                     this.state.seedStep--;
@@ -1271,7 +1388,7 @@
                 }
             },
 
-            // 🇨🇷 Cuando completan la siembra actualizamos la maceta, guardamos y activamos el riego inicial.
+            // Completa la siembra: actualiza maceta, guarda y activa riego inicial.
             completeSeeding() {
                 const plant = this.state.plants.find(p => p.id === this.state.activePotId);
                 if (plant) {
@@ -1286,7 +1403,7 @@
                 this.setupHydrationTimers();
             },
 
-            // 🇨🇷 Soft reset desde el logo de Expotec: limpia riegos, borra la 3ra maceta y muestra bienvenida.
+            // Soft reset: detiene riegos, limpia estado parcial y reabre bienvenida.
             softReset() {
                 try {
                     // Cerrar cualquier modal abierto
@@ -1298,7 +1415,7 @@
                     this.state.hydrationIntervals = {};
 
                     // Reset de riego para todas las macetas
-                    this.state.plants.forEach(p => { if (p) p.hydrationExpiration = 0; });
+                    this.state.plants.forEach(p => { if (p) { p.hydrationExpiration = 0; p.hydrationCycleMs = 0; } });
 
                     // Borrar planta en la tercera maceta
                     const third = this.state.plants.find(p => p && p.id === 'maceta-3');
@@ -1307,6 +1424,7 @@
                         third.emoji = '🍀';
                         third.photos = [];
                         third.hydrationExpiration = 0;
+                        third.hydrationCycleMs = 0;
                         delete third.type;
                         delete third.potImage;
                     }
@@ -1326,7 +1444,7 @@
                 }
             },
 
-            // 🇨🇷 Eliminamos la plantita seleccionada y regresamos la maceta a estado vacío.
+            // Elimina la planta seleccionada y restablece la maceta a estado vacío.
             deletePlant(potId) {
                 const plant = this.state.plants.find(p => p.id === potId);
                 if (!plant) return;
@@ -1340,6 +1458,7 @@
                 // Reiniciamos el estado de la planta
                 plant.planted = false;
                 plant.hydrationExpiration = 0;
+                plant.hydrationCycleMs = 0;
                 plant.photos = [];
                 
                 this.saveState();
@@ -1349,7 +1468,7 @@
             },
 
             // 2. Hidratar (Hydrating)
-            // 🇨🇷 Activamos cronómetros para cada maceta plantada y refrescamos su barra de agua.
+            // Inicia temporizadores por maceta plantada y actualiza la barra de hidratación.
             setupHydrationTimers() {
                 Object.values(this.state.hydrationIntervals).forEach(clearInterval);
                 this.state.hydrationIntervals = {};
@@ -1365,7 +1484,7 @@
                 });
             },
 
-            // 🇨🇷 Calculamos cuánta agua le queda a la planta y actualizamos UI y estado.
+            // Calcula tiempo de hidratación restante y sincroniza UI/estado.
             updateHydrationStatus(potId) {
                 const plant = this.state.plants.find(p => p.id === potId);
                 if (!plant || !plant.planted) return;
@@ -1381,6 +1500,7 @@
                 
                 if (secondsRemaining <= 0) {
                     plant.hydrationExpiration = 0;
+                    plant.hydrationCycleMs = 0;
                     const percent = 0;
                     barElement.style.width = `${percent}%`;
                     timerElement.textContent = "¡Tu planta tiene sed!";
@@ -1389,19 +1509,21 @@
                     btnElement.classList.add('pulse');
                     btnElement.title = "¡Necesita agua!";
                 } else {
-                    const percent = (secondsRemaining / (HYDRATION_DURATION_MS / 1000)) * 100;
+                    const cycleMs = plant.hydrationCycleMs || HYDRATION_BACKCOMPAT_MS;
+                    const percent = Math.min(100, cycleMs > 0 ? (timeRemaining / cycleMs) * 100 : 0);
                     barElement.style.width = `${percent}%`;
-                    timerElement.textContent = `${secondsRemaining}s restantes`;
+                    const label = this._formatHydrationRemaining(timeRemaining);
+                    timerElement.textContent = label;
 
                     btnElement.classList.remove('pulse');
                     btnElement.classList.add('opacity-50');
-                    btnElement.title = `Aún le quedan ${secondsRemaining}s`;
+                    btnElement.title = label;
                 }
 
                 this.saveState();
             },
 
-            // 🇨🇷 Arrancamos un nuevo ciclo de riego para la maceta indicada y mostramos feedback visual.
+            // Inicia un nuevo ciclo de riego para la maceta e indica feedback visual.
             hydratePlant(potId) {
                 const plant = this.state.plants.find(p => p.id === potId);
                 
@@ -1409,7 +1531,9 @@
                     return; 
                 }
 
-                plant.hydrationExpiration = Date.now() + HYDRATION_DURATION_MS;
+                const duration = this._randomHydrationDurationMs();
+                plant.hydrationCycleMs = duration;
+                plant.hydrationExpiration = Date.now() + duration;
                 this.saveState();
                 this.updateHydrationStatus(potId);
 
@@ -1431,7 +1555,7 @@
             },
             
             // 3. Podar (Pruning)
-            // 🇨🇷 Abrimos el panel de poda para que la familia revise los pasos con calma.
+            // Abre el panel de poda para la maceta activa.
             openPrunePanel(potId) {
                 this.state.activePotId = potId;
                 const panel = document.getElementById(DOM_IDS.prunePanel);
@@ -1445,7 +1569,7 @@
                 if (navigator.vibrate) navigator.vibrate(50);
             },
             
-            // 🇨🇷 Ocultamos el panel de poda y limpiamos la maceta activa.
+            // Cierra el panel de poda y limpia la maceta activa.
             closePrunePanel() {
                 const panel = document.getElementById(DOM_IDS.prunePanel);
                 if (panel) { panel.style.display = 'none'; panel.classList.remove('flex'); panel.classList.add('hidden'); }
@@ -1453,7 +1577,7 @@
                 this.updateModalCloseVisibility();
             },
 
-            // 🇨🇷 Refrescamos los consejitos de poda para que las peques sigan el orden correcto.
+            // Renderiza los pasos de poda en orden.
             renderPruneSteps() {
                 const container = document.getElementById(DOM_IDS.pruneStepContainer);
                 if (!container) {
@@ -1470,7 +1594,7 @@
             },
 
             // 4. Fotografiar (Photo Album)
-            // 🇨🇷 Abrimos el álbum para cargar fotos nuevas y ver el historial de la plantita.
+            // Abre el álbum para subir y visualizar fotos de la planta.
             openPhotoPanel(potId) {
                 this.state.activePotId = potId;
                 const plant = this.state.plants.find(p => p.id === potId);
@@ -1488,7 +1612,7 @@
                 this.playAudio('audio/aud-album.ogg');
             },
 
-            // 🇨🇷 Ocultamos el álbum y dejamos la maceta sin selección.
+            // Cierra el álbum y limpia la selección de maceta.
             closePhotoPanel() {
                 const panel = document.getElementById(DOM_IDS.photoPanel);
                 if (panel) { panel.style.display = 'none'; panel.classList.remove('flex'); panel.classList.add('hidden'); }
@@ -1496,7 +1620,7 @@
                 this.updateModalCloseVisibility();
             },
 
-            // 🇨🇷 Procesamos la foto que suben y la guardamos en el álbum correcto.
+            // Procesa la imagen subida y la guarda en el álbum de la maceta.
             handlePhotoUpload(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -1547,7 +1671,7 @@
                 reader.readAsDataURL(file);
             },
 
-            // 🇨🇷 Mostramos la galería de fotos de la maceta seleccionada.
+            // Renderiza la galería de fotos de la maceta seleccionada.
             renderAlbum(plant) {
                 // Si no nos pasan la planta, la buscamos usando la maceta activa.
                 if (!plant) {
@@ -1590,7 +1714,7 @@
                 `).join('');
             },
 
-            // 🇨🇷 Quitamos una foto del álbum y refrescamos la vista para que se note de inmediato.
+            // Elimina una foto del álbum y actualiza la vista.
             deletePhoto(photoId) {
                 const plant = this.state.plants.find(p => p.id === this.state.activePotId);
                 if (!plant) return;
@@ -1601,7 +1725,7 @@
             },
             
             // Lupa / IA simulada
-            // 🇨🇷 Simulamos un análisis mágico de la foto para dar un consejo divertido.
+            // Simula análisis de la foto y genera un consejo con audio.
             openAiModal(photoId) {
                 const modal = document.getElementById(DOM_IDS.aiModal);
                 const tipText = document.getElementById(DOM_IDS.aiTipText);
@@ -1646,7 +1770,7 @@
                 this.updateModalCloseVisibility();
             },
 
-            // 🇨🇷 Cerramos el modal de IA y limpiamos el texto mostrado.
+            // Cierra el modal de IA, limpia el texto y detiene audio.
             closeAiModal() {
                 const modal = document.getElementById(DOM_IDS.aiModal);
                 if (modal) { modal.style.display = 'none'; modal.classList.remove('flex'); modal.classList.add('hidden'); }
@@ -1659,7 +1783,7 @@
             },
             
             // 5. Expandir Foto (NUEVO)
-            // 🇨🇷 Abrimos la foto en grande con animación para verla con más detalle.
+            // Abre la foto en vista expandida con animación.
             expandPhoto(photoId) {
                 const plant = this.state.plants.find(p => p.id === this.state.activePotId);
                 const photo = plant ? plant.photos.find(p => p.id === photoId) : null;
@@ -1685,7 +1809,7 @@
                 this.updateModalCloseVisibility();
             },
             
-            // 🇨🇷 Cerramos la foto ampliada con una animación suave.
+            // Cierra la vista expandida de foto con animación de salida.
             closeExpandedPhotoModal() {
                 const modal = document.getElementById(DOM_IDS.expandedPhotoModal);
                 const content = document.getElementById(DOM_IDS.expandedPhotoContent);
@@ -1700,7 +1824,7 @@
                 }, 300);
             },
 
-            // 🇨🇷 Cerrar todos los modales abiertos para evitar overlays duplicados.
+            // Cierra todos los modales abiertos y evita overlays duplicados.
             closeAllModals() {
                 const ids = [
                     DOM_IDS.welcomeModal,
@@ -1727,7 +1851,7 @@
                 this.updateModalCloseVisibility();
             },
 
-            // 🇨🇷 Solo dejamos visibles los botones de cerrar del modal que está más al frente.
+            // Muestra los botones de cierre solo en el modal con mayor z-index.
             updateModalCloseVisibility() {
                 const modals = Array.from(document.querySelectorAll('[data-modal="true"]'))
                     .filter(m => m.style.display !== 'none' && !m.classList.contains('hidden'));
@@ -1750,7 +1874,7 @@
             },
 
             // --- Lógica de Clima ---
-            // 🇨🇷 Cambiamos el clima global, guardamos estado y encendemos animaciones ticas.
+            // Actualiza el clima global, guarda estado y activa animaciones.
             setWeather(weather, showToast = true) {
                 this.state.currentWeather = weather;
                 this.saveState();
@@ -1809,7 +1933,7 @@
                 console.log(`Reproduciendo audio de clima: ${audioComment}`);
             },
     
-            // 🇨🇷 Mostramos el tip de clima como toast durante unos segundos.
+            // Muestra el tip de clima como toast temporal.
             showWeatherToast(tip) {
                 const toast = document.getElementById(DOM_IDS.weatherToast);
                 if (!toast) return;
@@ -1826,7 +1950,7 @@
                 }, 100); 
             },
 
-            // 🇨🇷 Reutilizamos el mismo toast para otros mensajitos dentro de la app.
+            // Reutiliza el mismo toast para otros mensajes de la aplicación.
             showTooltip(text, options = {}) {
                 const duration = options.duration || 3000;
                 const toast = document.getElementById(DOM_IDS.weatherToast);
@@ -1847,7 +1971,7 @@
                 }, 100);
             },
 
-            // 🇨🇷 Colocamos el personaje del clima grande en pantalla según el clima escogido.
+            // Inserta el elemento visual del clima en pantalla según la selección.
             addWeatherCharacter(imagePath, animationClass = '', color) {
                 const charDisplay = document.getElementById(DOM_IDS.weatherCharacterDisplay);
                 
@@ -1858,7 +1982,7 @@
                 // Si queremos volver a pintarla con color, podemos descomentar la línea siguiente.
                 // iconDiv.style.cssText = `color: ${color};`; 
                 
-                // Nota tica: mejor mostramos la imagen con <img> para respetar los gráficos originales.
+                // Nota: se usa <img> para respetar los gráficos originales.
                 iconDiv.innerHTML = `<img src="${imagePath}" alt="Ícono de Clima" class="w-full h-full object-contain" />`;
                 
                 charDisplay.appendChild(iconDiv);
@@ -1910,7 +2034,7 @@
         }
     },
     
-    // 🇨🇷 Activamos una lluvia leve para el clima lluvioso.
+    // Inicia animación de lluvia para el clima lluvioso.
     startRainAnimation() {
         this.removeRainAnimation(); 
         const rainContainer = document.createElement('div');
@@ -1936,13 +2060,15 @@
                 }
             },
 
-            // 🇨🇷 Herramienta de desarrollo para preparar macetas de prueba con zanahoria y tomate.
+            // Utilidad de desarrollo: prepara macetas de prueba (zanahoria y tomate).
             generateDevPlants() {
                 const now = Date.now();
+                const dur1 = this._randomHydrationDurationMs();
+                const dur2 = this._randomHydrationDurationMs();
 
                 // Usamos los ids oficiales para asegurar consistencia al probar.
-                const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
-                const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+                const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + dur1, hydrationCycleMs: dur1, photos: [] };
+                const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + dur2, hydrationCycleMs: dur2, photos: [] };
 
                 // Confirmamos que el arreglo de plantas exista.
                 const existing = Array.isArray(this.state.plants) ? this.state.plants : [];
@@ -1959,15 +2085,17 @@
                 console.log('Macetas de prueba listas (zanahoria y tomate).');
             },
 
-            // 🇨🇷 Herramienta de desarrollo para reiniciar todo y dejar solo las macetas de prueba.
+            // Utilidad de desarrollo: reinicia estado y deja solo macetas de prueba.
             resetToDevPlants() {
                 if (!confirm('⚠️ Esto borrará TODAS las macetas y fotos. ¿Continuamos?')) return;
                 
                 const now = Date.now();
-                
+                const dur1 = this._randomHydrationDurationMs();
+                const dur2 = this._randomHydrationDurationMs();
+
                 // Creamos de nuevo las macetas de zanahoria y tomate.
-                const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
-                const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + HYDRATION_DURATION_MS, photos: [] };
+                const carrot = { id: 'maceta-1', planted: true, emoji: '🥕', type: 'carrot', hydrationExpiration: now + dur1, hydrationCycleMs: dur1, photos: [] };
+                const tomato = { id: 'maceta-2', planted: true, emoji: '🍅', type: 'tomato', hydrationExpiration: now + dur2, hydrationCycleMs: dur2, photos: [] };
                 const third = { id: 'maceta-3', planted: false, emoji: '🍀', hydrationExpiration: 0, photos: [] };
                 
                 // Reiniciamos todo el estado para volver al punto de partida.
